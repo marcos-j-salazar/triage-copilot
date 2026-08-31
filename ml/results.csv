@@ -1,0 +1,13 @@
+Number,Elapsed,Statement,Feedback,Rows
+1,0.87,drop table T_orders,Table dropped.,0
+2,0.82,drop table T_despatch,Table dropped.,0
+3,0.86,drop table T_client,Table dropped.,0
+4,0.80,drop table T_agents,Table dropped.,0
+5,0.05,CREATE TABLE T_AGENTS     (	AGENT_CODE 	VARCHAR(6)		NOT NULL,Table created.,0
+6,0.02,"Begin INSERT INTO T_AGENTS VALUES ('A007', 'Ramasundar', 'Ba",1 row(s) inserted.,1
+7,0.04,CREATE TABLE T_CLIENT     (	CT_CODE 		VARCHAR(6) 	NOT NULL P,Table created.,0
+8,0.06,"Begin INSERT INTO T_CLIENT VALUES ('C00013', 'Holmes', 'Lond",1 row(s) inserted.,1
+9,0.05,CREATE TABLE T_DESPATCH     (	DES_NUM 		VARCHAR(6)		NOT NULL,Table created.,0
+10,0.02,"Begin INSERT INTO T_DESPATCH VALUES('D002',TO_DATE('06/10/20",1 row(s) inserted.,1
+11,0.07,CREATE TABLE T_ORDERS     (	ORD_NUM 		NUMBER 		NOT NULL PRIM,Table created.,0
+12,0.06,"Begin INSERT INTO T_ORDERS VALUES (200100, 1000.00, 600.00, ",1 row(s) inserted.,1
