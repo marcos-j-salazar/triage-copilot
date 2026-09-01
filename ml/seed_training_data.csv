@@ -687,6 +687,10 @@ Admissions / Enrollment,Verification Letter,EN,Can I pick up my verification let
 Admissions / Enrollment,Verification Letter,EN,Do I need to fill out any forms for the verification letter?,60.0
 Admissions / Enrollment,Verification Letter,EN,I need my enrollment verification letter as soon as possible.,61.0
 Admissions / Enrollment,Verification Letter,EN,Is there a fee for obtaining a verification letter?,51.0
+Admissions / Enrollment,Verification Letter,EN,I need proof that I come to school,34.0
+Admissions / Enrollment,Verification Letter,EN,Can I get an enrollment verification letter?,44.0
+Admissions / Enrollment,Verification Letter,EN,I need a letter proving I am a student here.,44.0
+Admissions / Enrollment,Verification Letter,EN,Where do I get proof of enrollment?,35.0
 Appointment,Admissions/Enrollment Appointment,EN,"Hey, I need to book an admissions appointment.",46.0
 Appointment,Admissions/Enrollment Appointment,EN,Can I set up a time to talk about my enrollment?,48.0
 Appointment,Admissions/Enrollment Appointment,EN,"I was hoping to get help with my application process, can I get an appointment?",79.0
@@ -1522,6 +1526,11 @@ Student Financial Services,"Billing, Payments and Refunds",EN,Is there a way to 
 Student Financial Services,"Billing, Payments and Refunds",EN,What documentation do I need for a refund request?,50.0
 Student Financial Services,"Billing, Payments and Refunds",EN,Can you guide me through the payment portal?,44.0
 Student Financial Services,"Billing, Payments and Refunds",EN,I need assistance with understanding my account statement.,58.0
+Student Financial Services,"Billing, Payments and Refunds",EN,I need to pay so I can select my classes,40.0
+Student Financial Services,"Billing, Payments and Refunds",EN,How do I make a payment on my balance?,38.0
+Student Financial Services,"Billing, Payments and Refunds",EN,I need to pay my tuition bill.,30.0
+Student Financial Services,"Billing, Payments and Refunds",EN,Can I pay for my classes online?,32.0
+Student Financial Services,"Billing, Payments and Refunds",EN,My account has a financial hold and I need to pay.,50.0
 Student Financial Services,Book Voucher Questions,EN,"Hey, I have some questions about my book voucher.",49.0
 Student Financial Services,Book Voucher Questions,EN,Can you help me figure out how to use my book voucher?,54.0
 Student Financial Services,Book Voucher Questions,EN,I’m not sure if my book voucher is active yet.,46.0
