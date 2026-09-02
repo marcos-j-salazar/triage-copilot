@@ -1,10 +1,12 @@
 # Staff Triage Copilot
 
-A machine-learning service that routes student inquiries to the correct front-desk department (primarily English; limited Spanish coverage from the original seed data, not yet systematically expanded) student inquiries
-to the correct front-desk department at a community college. Staff paste what a
-student says, and the API returns a predicted category with a confidence score.
-Corrections made by staff are written back to a database to feed the next round of
-model training (an active-learning feedback loop).
+A machine-learning service that routes student inquiries to the correct
+front-desk department at a community college. Trained primarily on English
+text; the original seed data included limited Spanish coverage, but this
+hasn't been systematically expanded. Staff paste what a student says, and the
+API returns a predicted category with a confidence score. Corrections made by
+staff are written back to a database to feed the next round of model training
+(an active-learning feedback loop).
 
 ## How it works
 
@@ -41,6 +43,30 @@ lifespan handler.
 Test accuracy is roughly **0.87** (see the notebook's conclusion for the full
 train/eval history). Subcategory prediction is out of scope for the current model
 and is expected to be handled as a lookup.
+
+## Design decisions
+
+**Logistic Regression over LinearSVC.** Both perform similarly on this data, but
+LogisticRegression gives calibrated `predict_proba()` output. That matters here:
+low-confidence predictions can be flagged for staff review instead of being
+auto-routed to a department.
+
+**Splitting before augmentation.** An early version of the pipeline augmented the
+data before the train/test split, which leaked near-duplicate phrases across both
+sides and reported a false 100% accuracy. Splitting first revealed the true
+baseline (~0.87) and shaped the rest of the data strategy — where to add phrases,
+which categories were actually confusable, and when more data stopped helping.
+
+**Category-only prediction; subcategory as a lookup.** There isn't enough training
+data per subcategory to model it well, so the model predicts category only.
+Subcategory resolution is deterministic and handled as a lookup — it isn't
+something worth introducing model uncertainty into.
+
+**RDS security group allows all inbound IPs (`0.0.0.0/0`).** Render's free tier
+has no fixed outbound IP, so there is no stable CIDR to allowlist. Access is still
+protected by password plus SSL (`sslmode=require`). This is a deliberate,
+documented tradeoff for a portfolio deployment, not an oversight — a production
+setup would put the database behind a VPC or a fixed-IP egress.
 
 ## Requirements
 
@@ -123,7 +149,7 @@ Records a staff correction into the `training_phrases` table with `source = 'man
 Request:
 
 ```json
-{ "text": "termine el examen de ubicacion", "correct_category": "ESL Advising" }
+{ "text": "I finished my ESL placement exam", "correct_category": "ESL Advising" }
 ```
 
 Response:
@@ -169,9 +195,6 @@ ml/
   seed_training_data.csv           reference training dataset
   *_contrastive_phrases.csv        LLM-generated / curated training phrases
   llm_generated_phrases.csv        raw LLM generation output
-
-notebooks/              copy of the ML pipeline notebook
-training_data.csv       small cleaned reference dataset
 ```
 
 ## CI/CD
