@@ -5,6 +5,13 @@ from contextlib import asynccontextmanager
 import joblib
 from datetime import datetime, timezone
 from pydantic import BaseModel, Field
+from sqlalchemy import create_engine, text
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+db_engine = create_engine(os.environ["DATABASE_URL"])
+
 
 MODEL_PATH = "models/model.joblib"
 ml_model = {}
@@ -15,10 +22,13 @@ async def lifespan(app: FastAPI):
     yield
     ml_model.clear()
 
-
 app = FastAPI(title="Staff Triage Copilot", lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+class UpdateDataRequest(BaseModel):
+    text: str = Field(..., min_length=1)
+    correct_category: str = Field(..., min_length=1)
 
 class PredictRequest(BaseModel):
     text: str = Field(..., min_length=1, description="Student's request, typed by Staff")
@@ -50,3 +60,16 @@ def predict(request: PredictRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference failed: {str(e)}")
+    
+@app.post("/update-data")
+def update_data(request: UpdateDataRequest):
+        try:
+            with db_engine.connect() as conn:
+                conn.execute(
+                    text("INSERT INTO training_phrases (text, category, source) VALUES (:phrase, :category, :source)"),
+                    {"phrase": request.text, "category": request.correct_category, "source": "manual"}
+                )
+                conn.commit()
+            return {"status": "Recorded"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to save correction: {str(e)}")

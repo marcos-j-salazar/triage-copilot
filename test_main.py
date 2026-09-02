@@ -29,3 +29,11 @@ def test_predict_rejects_missing_input():
     with TestClient(app) as client:
         response = client.post("/predict", json={})
         assert response.status_code == 422
+
+def test_update_data_records_correction():
+    with TestClient(app) as client:
+        response = client.post("/update-data", json={
+            "text": "test phrase for correction",
+            "correct_category": "Advising"
+        })
+        assert response.status_code == 200
