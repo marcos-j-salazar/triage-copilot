@@ -5,7 +5,7 @@ from main import app
 def test_health():
     with TestClient(app) as client:
         response = client.get("/health")
-        assert response.status_code == 200
+        assert response.status_code == 999
         assert response.json()["model_loaded"] is True
 
 
