@@ -37,3 +37,19 @@ def test_update_data_records_correction():
             "correct_category": "Advising"
         })
         assert response.status_code == 200
+        assert response.json()["status"] == "Recorded"
+
+def test_update_data_rejects_empty_text():
+    with TestClient(app) as client:
+        response = client.post("/update-data", json={
+            "text": "",
+            "correct_category": "Advising"
+        })
+        assert response.status_code == 422
+
+def test_update_data_rejects_missing_category():
+    with TestClient(app) as client:
+        response = client.post("/update-data", json={
+            "text": "some phrase"
+        })
+        assert response.status_code == 422
