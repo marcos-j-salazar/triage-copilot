@@ -1,12 +1,12 @@
 # Staff Triage Copilot
 
-A machine-learning service that routes student inquiries to the correct
-front-desk department at a community college. Trained primarily on English
+A machine learning service that routes student inquiries to the correct
+front desk department at a community college. Trained primarily on English
 text; the original seed data included limited Spanish coverage, but this
 hasn't been systematically expanded. Staff paste what a student says, and the
 API returns a predicted category with a confidence score. Corrections made by
 staff are written back to a database to feed the next round of model training
-(an active-learning feedback loop).
+(an active learning feedback loop).
 
 ## How it works
 
@@ -22,7 +22,7 @@ Student request (text)
 
 The classifier is a `Pipeline` of:
 
-- `TfidfVectorizer(ngram_range=(1, 2), sublinear_tf=True)` — word + bigram features
+- `TfidfVectorizer(ngram_range=(1, 2), sublinear_tf=True)`, word + bigram features
 - `LogisticRegression(class_weight="balanced", max_iter=1000)`
 
 It is trained offline in `ml/Staff_Triage_ML_Pipeline.ipynb` and exported to
@@ -48,25 +48,25 @@ and is expected to be handled as a lookup.
 
 **Logistic Regression over LinearSVC.** Both perform similarly on this data, but
 LogisticRegression gives calibrated `predict_proba()` output. That matters here:
-low-confidence predictions can be flagged for staff review instead of being
-auto-routed to a department.
+low confidence predictions can be flagged for staff review instead of being
+auto routed to a department.
 
 **Splitting before augmentation.** An early version of the pipeline augmented the
-data before the train/test split, which leaked near-duplicate phrases across both
+data before the train/test split, which leaked near duplicate phrases across both
 sides and reported a false 100% accuracy. Splitting first revealed the true
-baseline (~0.87) and shaped the rest of the data strategy — where to add phrases,
+baseline (~0.87) and shaped the rest of the data strategy, where to add phrases,
 which categories were actually confusable, and when more data stopped helping.
 
-**Category-only prediction; subcategory as a lookup.** There isn't enough training
+**Category only prediction; subcategory as a lookup.** There isn't enough training
 data per subcategory to model it well, so the model predicts category only.
-Subcategory resolution is deterministic and handled as a lookup — it isn't
+Subcategory resolution is deterministic and handled as a lookup, it isn't
 something worth introducing model uncertainty into.
 
 **RDS security group allows all inbound IPs (`0.0.0.0/0`).** Render's free tier
 has no fixed outbound IP, so there is no stable CIDR to allowlist. Access is still
 protected by password plus SSL (`sslmode=require`). This is a deliberate,
-documented tradeoff for a portfolio deployment, not an oversight — a production
-setup would put the database behind a VPC or a fixed-IP egress.
+documented tradeoff for a portfolio deployment, not an oversight, a production
+setup would put the database behind a VPC or a fixed IP egress.
 
 ## Requirements
 
@@ -158,7 +158,7 @@ Response:
 { "status": "Recorded" }
 ```
 
-Both fields are required and must be non-empty (`422` otherwise).
+Both fields are required and must be non empty (`422` otherwise).
 
 ## Testing
 
