@@ -23,6 +23,7 @@ jobs:
       - name: Run tests
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          STAFF_API_KEY: ${{ secrets.STAFF_API_KEY }}
         run: pytest
 
   deploy:
