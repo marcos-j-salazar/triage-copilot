@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
@@ -15,6 +15,12 @@ db_engine = create_engine(os.environ["DATABASE_URL"])
 
 MODEL_PATH = "models/model.joblib"
 ml_model = {}
+STAFF_API_KEY = os.environ["STAFF_API_KEY"]
+
+
+def verify_api_key(x_api_key: str = Header(...)):
+    if x_api_key != STAFF_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -62,14 +68,14 @@ def predict(request: PredictRequest):
         raise HTTPException(status_code=500, detail=f"Inference failed: {str(e)}")
     
 @app.post("/update-data")
-def update_data(request: UpdateDataRequest):
-        try:
-            with db_engine.connect() as conn:
-                conn.execute(
-                    text("INSERT INTO training_phrases (text, category, source) VALUES (:phrase, :category, :source)"),
-                    {"phrase": request.text, "category": request.correct_category, "source": "manual"}
-                )
-                conn.commit()
-            return {"status": "Recorded"}
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to save correction: {str(e)}")
+def update_data(request: UpdateDataRequest, _: None = Depends(verify_api_key)):
+    try:
+        with db_engine.connect() as conn:
+            conn.execute(
+                text("INSERT INTO training_phrases (text, category, source) VALUES (:phrase, :category, :source)"),
+                {"phrase": request.text, "category": request.correct_category, "source": "manual"}
+            )
+            conn.commit()
+        return {"status": "Recorded"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save correction: {str(e)}")
