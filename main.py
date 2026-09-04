@@ -52,7 +52,7 @@ class PredictResponse(BaseModel):
 
 @app.get("/")
 def root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 @app.get("/health")
 def health():
