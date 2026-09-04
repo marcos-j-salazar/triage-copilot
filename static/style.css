@@ -1,0 +1,97 @@
+:root {
+  --ink: #1B2A4A;
+  --ink-soft: #5B6B85;
+  --paper: #F5F6F3;
+  --paper-raised: #FFFFFF;
+  --line: #D8DCD6;
+  --accent: #1B2A4A;
+  --accent-ink: #FFFFFF;
+  --confidence-high: #2F7D4F;
+  --confidence-mid: #C67D2E;
+  --confidence-low: #A02334;
+  --error: #A02334;
+  --radius: 6px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 40px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--error);
+}
+
+.wordmark {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+}
+
+.context {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.panel {
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 32px;
+}
+
+.field-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+
+textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  resize: vertical;
+  min-height: 96px;
+}
+
+.btn {
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: var(--radius);
+  padding: 11px 20px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  margin-top: 16px;
+}

@@ -4,7 +4,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Triage Copilot — NSCC Admissions</title>
+	<title>Triage Copilot — Student Success Center</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -16,9 +16,40 @@
 <div class="page">
 
   <header class="header">
-    <span class="wordmark">Triage Copilot</span>
-    <span class="context">NSCC Admissions &amp; Enrollment</span>
-  </header>
+  <span class="wordmark">Triage Copilot</span>
+  <span class="context">NSCC Student Success Center</span>
+</header>
+
+    <main class="panel">
+
+    <form id="predict-form" class="predict-form">
+      <label for="student-text" class="field-label">Student Inquiry</label>
+      <textarea
+        id="student-text"
+        name="student-text"
+        placeholder="Type or paste what the student said…"
+        rows="4"
+        required
+      ></textarea>
+      <button type="submit" id="submit-btn" class="btn btn-primary">Route this request</button>
+    </form>
+
+    <div id="error-box" class="error-box" hidden></div>
+
+    <section id="result" class="result" hidden>
+      <div class="result-category">
+        <span class="result-label">Routed to</span>
+        <h2 id="result-category-name" class="category-name">—</h2>
+      </div>
+      <div class="confidence">
+        <div class="confidence-track">
+          <div id="confidence-fill" class="confidence-fill"></div>
+        </div>
+        <span id="confidence-text" class="confidence-text">—</span>
+      </div>
+    </section>
+
+  </main>
 
 </div>
 
