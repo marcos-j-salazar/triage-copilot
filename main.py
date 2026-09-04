@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
 import os
 from dotenv import load_dotenv
+from fastapi.templating import Jinja2Templates
+from fastapi import Request
 
 load_dotenv()
 db_engine = create_engine(os.environ["DATABASE_URL"])
@@ -32,6 +34,9 @@ app = FastAPI(title="Staff Triage Copilot", lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+templates = Jinja2Templates(directory=".")
+
+
 class UpdateDataRequest(BaseModel):
     text: str = Field(..., min_length=1)
     correct_category: str = Field(..., min_length=1)
@@ -46,8 +51,8 @@ class PredictResponse(BaseModel):
 
 
 @app.get("/")
-def root():
-    return FileResponse("index.html")
+def root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/health")
 def health():
