@@ -95,3 +95,116 @@ textarea {
   color: var(--accent-ink);
   margin-top: 16px;
 }
+
+.result {
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+.result-category {
+  margin-bottom: 18px;
+}
+
+.result-label {
+  display: block;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+
+.category-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 28px;
+  margin: 0;
+}
+
+.confidence {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.confidence-track {
+  flex: 1;
+  height: 8px;
+  background: var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.confidence-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 4px;
+  transition: width 300ms ease;
+}
+
+.confidence-text {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.verify-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.btn-outline:hover {
+  border-color: var(--ink-soft);
+}
+
+.correction-step {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px dashed var(--line);
+}
+
+select {
+  width: 100%;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+
+.confirmation-msg {
+  margin-top: 18px;
+  font-size: 14px;
+  color: var(--confidence-high);
+  font-weight: 500;
+}
+
+#confirm-yes {
+  border-color: var(--confidence-high);
+  color: var(--confidence-high);
+}
+
+#confirm-yes:hover {
+  background: var(--confidence-high);
+  color: var(--accent-ink);
+}
+
+#confirm-no {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+#confirm-no:hover {
+  background: var(--error);
+  color: var(--accent-ink);
+}
