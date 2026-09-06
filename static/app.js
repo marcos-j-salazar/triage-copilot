@@ -63,8 +63,30 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-confirmYesBtn.addEventListener('click', () => {
+confirmYesBtn.addEventListener('click', async () => {
   verifyStep.hidden = true;
+
+  try {
+    const response = await fetch('/update-data', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': STAFF_API_KEY
+      },
+      body: JSON.stringify({
+        text: currentText,
+        correct_category: categoryNameEl.textContent,
+        source: 'confirmed'
+      })
+    });
+
+    const data = await response.json();
+    console.log('Confirmation saved:', data);
+
+  } catch (err) {
+    console.log('Error saving confirmation:', err);
+  }
+
   confirmationMsg.textContent = "Confirmed!";
   confirmationMsg.hidden = false;
 });
@@ -95,8 +117,9 @@ saveCorrectionBtn.addEventListener('click', async () => {
       },
       body: JSON.stringify({
         text: currentText,
-        correct_category: correctCategory
-      })
+        correct_category: correctCategory,
+        source: 'staff_corrected'
+  })
     });
 
     const data = await response.json();

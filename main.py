@@ -40,6 +40,7 @@ templates = Jinja2Templates(directory=".")
 class UpdateDataRequest(BaseModel):
     text: str = Field(..., min_length=1)
     correct_category: str = Field(..., min_length=1)
+    source: str = Field(..., min_length=1, description="Source  of the correction")
 
 class PredictRequest(BaseModel):
     text: str = Field(..., min_length=1, description="Student's request, typed by Staff")
@@ -78,7 +79,7 @@ def update_data(request: UpdateDataRequest, _: None = Depends(verify_api_key)):
         with db_engine.connect() as conn:
             conn.execute(
                 text("INSERT INTO training_phrases (text, category, source) VALUES (:phrase, :category, :source)"),
-                {"phrase": request.text, "category": request.correct_category, "source": "manual"}
+                {"phrase": request.text, "category": request.correct_category, "source": request.source}
             )
             conn.commit()
         return {"status": "Recorded"}
