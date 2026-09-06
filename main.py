@@ -40,7 +40,7 @@ templates = Jinja2Templates(directory=".")
 class UpdateDataRequest(BaseModel):
     text: str = Field(..., min_length=1)
     correct_category: str = Field(..., min_length=1)
-    source: str = Field(..., min_length=1, description="Source  of the correction")
+    source: str = Field(default="staff_corrected", min_length=1, description="Source of the correction")
 
 class PredictRequest(BaseModel):
     text: str = Field(..., min_length=1, description="Student's request, typed by Staff")
