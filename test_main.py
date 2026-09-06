@@ -81,3 +81,8 @@ def test_update_data_rejects_wrong_api_key():
             headers={"x-api-key": "wrong-key-entirely"}
         )
         assert response.status_code == 401
+
+def test_root_loads():
+    with TestClient(app) as client:
+        response = client.get("/")
+        assert response.status_code == 200
