@@ -10,9 +10,7 @@ import os
 from dotenv import load_dotenv
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
-from retrain import pull_training_data, train_new_pipeline, evaluate_current_model, backup_current_model, save_new_model
-
-load_dotenv()
+from retrain import pull_training_data, train_new_pipeline, evaluate_current_model, backup_current_model, save_new_model, upload_model_to_s3, download_model_from_s3
 db_engine = create_engine(os.environ["DATABASE_URL"])
 
 MODEL_PATH = "models/model.joblib"
@@ -26,6 +24,7 @@ def verify_api_key(x_api_key: str = Header(...)):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    download_model_from_s3()
     ml_model["pipeline"] = joblib.load(MODEL_PATH)
     yield
     ml_model.clear()
@@ -117,10 +116,22 @@ def retrain():
     backup_path = backup_current_model()
     save_new_model(new_pipeline)
     ml_model["pipeline"] = new_pipeline
+    s3_upload_success = upload_model_to_s3()
 
     return {
         "swapped": True,
         "backup_saved_to": backup_path,
+        "s3_backup_success": s3_upload_success,
         "previous_accuracy": round(current_test_acc, 3),
         "new_accuracy": round(new_test_acc, 3)
     }
+
+@app.get("/test-s3-upload", dependencies=[Depends(verify_api_key)])
+def test_s3_upload():
+    success = upload_model_to_s3()
+    return {"status": "uploaded"} if success else {"status": "upload failed"}
+
+@app.get("/test-s3-download", dependencies=[Depends(verify_api_key)])
+def test_s3_download():
+    success = download_model_from_s3()
+    return {"status": "downloaded"} if success else {"status": "download failed"}

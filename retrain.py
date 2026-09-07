@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -7,6 +8,17 @@ from sqlalchemy import text
 import joblib
 import shutil
 from datetime import datetime, timezone
+import boto3
+from botocore.exceptions import ClientError
+
+s3_client = boto3.client(
+    's3',
+    aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+    aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"]
+)
+
+S3_BUCKET = os.environ["AWS_S3_BUCKET"]
+S3_MODEL_KEY = "model.joblib"
 
 
 def pull_training_data(db_engine):
@@ -48,3 +60,22 @@ def backup_current_model(model_path="models/model.joblib"):
 
 def save_new_model(pipeline, model_path="models/model.joblib"):
     joblib.dump(pipeline, model_path)
+
+
+def upload_model_to_s3(local_path="models/model.joblib"):
+    try:
+        s3_client.upload_file(local_path, S3_BUCKET, S3_MODEL_KEY)
+        return True
+    except ClientError as e:
+        print(f"Failed to upload model to S3: {e}")
+        return False
+
+
+def download_model_from_s3(local_path="models/model.joblib"):
+    try:
+        s3_client.download_file(S3_BUCKET, S3_MODEL_KEY, local_path)
+        print("Loaded model from S3")
+        return True
+    except ClientError as e:
+        print(f"Could not download model from S3 ({e}), falling back to local file")
+        return False
