@@ -4,6 +4,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 from sqlalchemy import text
+import joblib
+import shutil
+from datetime import datetime, timezone
 
 
 def pull_training_data(db_engine):
@@ -34,3 +37,14 @@ def train_new_pipeline(df):
 
 def evaluate_current_model(current_pipeline, X_test, y_test):
     return current_pipeline.score(X_test, y_test)
+
+
+def backup_current_model(model_path="models/model.joblib"):
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    backup_path = f"models/model_backup_{timestamp}.joblib"
+    shutil.copy(model_path, backup_path)
+    return backup_path
+
+
+def save_new_model(pipeline, model_path="models/model.joblib"):
+    joblib.dump(pipeline, model_path)

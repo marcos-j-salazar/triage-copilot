@@ -10,7 +10,7 @@ import os
 from dotenv import load_dotenv
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
-from retrain import pull_training_data, train_new_pipeline, evaluate_current_model
+from retrain import pull_training_data, train_new_pipeline, evaluate_current_model, backup_current_model, save_new_model
 
 load_dotenv()
 db_engine = create_engine(os.environ["DATABASE_URL"])
@@ -98,4 +98,29 @@ def test_compare_models():
         "current_model_test_accuracy": round(current_test_acc, 3),
         "new_model_test_accuracy": round(new_test_acc, 3),
         "new_model_is_better": new_test_acc >= current_test_acc
+    }
+
+@app.post("/retrain", dependencies=[Depends(verify_api_key)])
+def retrain():
+    df = pull_training_data(db_engine)
+    new_pipeline, new_train_acc, new_test_acc, X_test, y_test = train_new_pipeline(df)
+    current_test_acc = evaluate_current_model(ml_model["pipeline"], X_test, y_test)
+
+    if new_test_acc < current_test_acc:
+        return {
+            "swapped": False,
+            "reason": "New model did not outperform current model",
+            "current_accuracy": round(current_test_acc, 3),
+            "new_accuracy": round(new_test_acc, 3)
+        }
+
+    backup_path = backup_current_model()
+    save_new_model(new_pipeline)
+    ml_model["pipeline"] = new_pipeline
+
+    return {
+        "swapped": True,
+        "backup_saved_to": backup_path,
+        "previous_accuracy": round(current_test_acc, 3),
+        "new_accuracy": round(new_test_acc, 3)
     }

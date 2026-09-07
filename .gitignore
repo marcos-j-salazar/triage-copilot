@@ -15,3 +15,5 @@ env/
 
 # Logs
 *.log
+
+models/model_backup_*.joblib
