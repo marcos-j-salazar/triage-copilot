@@ -10,10 +10,10 @@ import os
 from dotenv import load_dotenv
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
+from retrain import pull_training_data, train_new_pipeline, evaluate_current_model
 
 load_dotenv()
 db_engine = create_engine(os.environ["DATABASE_URL"])
-
 
 MODEL_PATH = "models/model.joblib"
 ml_model = {}
@@ -85,3 +85,17 @@ def update_data(request: UpdateDataRequest, _: None = Depends(verify_api_key)):
         return {"status": "Recorded"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save correction: {str(e)}")
+
+@app.get("/test-compare-models")
+def test_compare_models():
+    df = pull_training_data(db_engine)
+
+    new_pipeline, new_train_acc, new_test_acc, X_test, y_test = train_new_pipeline(df)
+    current_test_acc = evaluate_current_model(ml_model["pipeline"], X_test, y_test)
+
+    return {
+        "row_count": len(df),
+        "current_model_test_accuracy": round(current_test_acc, 3),
+        "new_model_test_accuracy": round(new_test_acc, 3),
+        "new_model_is_better": new_test_acc >= current_test_acc
+    }
