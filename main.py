@@ -11,12 +11,18 @@ from dotenv import load_dotenv
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
 from retrain import pull_training_data, train_new_pipeline, evaluate_current_model, backup_current_model, save_new_model, upload_model_to_s3, download_model_from_s3
-db_engine = create_engine(os.environ["DATABASE_URL"])
+import time
 
+
+
+
+db_engine = create_engine(os.environ["DATABASE_URL"])
 MODEL_PATH = "models/model.joblib"
 ml_model = {}
 STAFF_API_KEY = os.environ["STAFF_API_KEY"]
 
+# cooldown timer for /retrain
+_last_retrain_time = [0.0]
 
 def verify_api_key(x_api_key: str = Header(...)):
     if x_api_key != STAFF_API_KEY:
@@ -85,22 +91,13 @@ def update_data(request: UpdateDataRequest, _: None = Depends(verify_api_key)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save correction: {str(e)}")
 
-@app.get("/test-compare-models")
-def test_compare_models():
-    df = pull_training_data(db_engine)
-
-    new_pipeline, new_train_acc, new_test_acc, X_test, y_test = train_new_pipeline(df)
-    current_test_acc = evaluate_current_model(ml_model["pipeline"], X_test, y_test)
-
-    return {
-        "row_count": len(df),
-        "current_model_test_accuracy": round(current_test_acc, 3),
-        "new_model_test_accuracy": round(new_test_acc, 3),
-        "new_model_is_better": new_test_acc >= current_test_acc
-    }
-
 @app.post("/retrain", dependencies=[Depends(verify_api_key)])
 def retrain():
+    now = time.time()
+    if now - _last_retrain_time[0] < 300:
+        raise HTTPException(status_code=429, detail="Retrain was run recently, please wait before trying again")
+    _last_retrain_time[0] = now
+
     df = pull_training_data(db_engine)
     new_pipeline, new_train_acc, new_test_acc, X_test, y_test = train_new_pipeline(df)
     current_test_acc = evaluate_current_model(ml_model["pipeline"], X_test, y_test)
@@ -125,13 +122,3 @@ def retrain():
         "previous_accuracy": round(current_test_acc, 3),
         "new_accuracy": round(new_test_acc, 3)
     }
-
-@app.get("/test-s3-upload", dependencies=[Depends(verify_api_key)])
-def test_s3_upload():
-    success = upload_model_to_s3()
-    return {"status": "uploaded"} if success else {"status": "upload failed"}
-
-@app.get("/test-s3-download", dependencies=[Depends(verify_api_key)])
-def test_s3_download():
-    success = download_model_from_s3()
-    return {"status": "downloaded"} if success else {"status": "download failed"}
