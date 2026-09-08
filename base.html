@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Triage Copilot{% endblock %}</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div id="sidebar-overlay" class="sidebar-overlay" hidden></div>
+
+<nav id="sidebar" class="sidebar" hidden>
+  <a href="/" class="sidebar-link">Predict</a>
+  <a href="/admin" class="sidebar-link">Admin</a>
+</nav>
+
+<div class="page">
+
+  <header class="header">
+    <button type="button" id="menu-btn" class="menu-btn" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+    <span class="wordmark">Triage Copilot</span>
+    <span class="context">{% block context %}{% endblock %}</span>
+  </header>
+
+  {% block content %}{% endblock %}
+
+</div>
+
+<script>
+  const STAFF_API_KEY = "{{ api_key }}";
+</script>
+<script src="/static/nav.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

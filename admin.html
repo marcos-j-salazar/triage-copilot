@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Triage Copilot{% endblock %}
+
+{% block content %}
+
+  <main class="panel">
+
+    <h2 class="category-name">Model Retraining</h2>
+    <p class="field-label">
+      Pulls the latest staff corrections and confirmations, retrains the
+      model, and replaces the live model only if the new one performs
+      better. This can take one to two minutes.
+    </p>
+
+    <button type="button" id="retrain-btn" class="btn btn-primary">Retrain Model</button>
+
+    <div id="retrain-status" class="confirmation-msg" hidden></div>
+
+  </main>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/admin.js"></script>
+{% endblock %}

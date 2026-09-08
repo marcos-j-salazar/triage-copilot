@@ -122,3 +122,7 @@ def retrain():
         "previous_accuracy": round(current_test_acc, 3),
         "new_accuracy": round(new_test_acc, 3)
     }
+
+@app.get("/admin")
+def admin(request: Request):
+    return templates.TemplateResponse(request, "admin.html", {"api_key": STAFF_API_KEY})

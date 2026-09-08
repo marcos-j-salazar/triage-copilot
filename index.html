@@ -1,26 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Triage Copilot — Student Success Center</title>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-	<link rel="stylesheet" href="/static/style.css">
-</head>
+{% block title %}Triage Copilot — Student Success Center{% endblock %}
 
-<body>
+{% block content %}
 
-<div class="page">
-
-  <header class="header">
-  <span class="wordmark">Triage Copilot</span>
-  <span class="context">NSCC Student Success Center</span>
-</header>
-
-    <main class="panel">
+  <main class="panel">
 
     <form id="predict-form" class="predict-form">
       <label for="student-text" class="field-label">Student Inquiry</label>
@@ -36,7 +20,7 @@
 
     <div id="error-box" class="error-box" hidden></div>
 
-        <section id="result" class="result" hidden>
+    <section id="result" class="result" hidden>
       <div class="result-category">
         <span class="result-label">Department Needed:</span>
         <h2 id="result-category-name" class="category-name">—</h2>
@@ -73,12 +57,11 @@
       <p id="confirmation-msg" class="confirmation-msg" hidden></p>
 
     </section>
+
   </main>
 
-</div>
-<script>
-  const STAFF_API_KEY = "{{ api_key }}";
-</script>
+{% endblock %}
+
+{% block scripts %}
 <script src="/static/app.js"></script>
-</body>
-</html>
+{% endblock %}
