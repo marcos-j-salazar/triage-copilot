@@ -15,7 +15,7 @@ import time
 
 
 
-
+load_dotenv()
 db_engine = create_engine(os.environ["DATABASE_URL"])
 MODEL_PATH = "models/model.joblib"
 ml_model = {}

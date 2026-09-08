@@ -10,6 +10,10 @@ import shutil
 from datetime import datetime, timezone
 import boto3
 from botocore.exceptions import ClientError
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 s3_client = boto3.client(
     's3',
