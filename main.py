@@ -10,7 +10,7 @@ import os
 from dotenv import load_dotenv
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
-from retrain import pull_training_data, train_new_pipeline, evaluate_current_model, backup_current_model, save_new_model, upload_model_to_s3, download_model_from_s3
+from retrain import pull_training_data, train_new_pipeline, evaluate_current_model, backup_current_model, save_new_model, upload_model_to_s3, download_model_from_s3, load_holdout_set
 import time
 
 
@@ -99,8 +99,11 @@ def retrain():
     _last_retrain_time[0] = now
 
     df = pull_training_data(db_engine)
-    new_pipeline, new_train_acc, new_test_acc, X_test, y_test = train_new_pipeline(df)
-    current_test_acc = evaluate_current_model(ml_model["pipeline"], X_test, y_test)
+    new_pipeline, _, _, _, _ = train_new_pipeline(df)
+
+    X_test_fixed, y_test_fixed = load_holdout_set()
+    new_test_acc = new_pipeline.score(X_test_fixed, y_test_fixed)
+    current_test_acc = evaluate_current_model(ml_model["pipeline"], X_test_fixed, y_test_fixed)
 
     if new_test_acc < current_test_acc:
         return {

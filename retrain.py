@@ -83,3 +83,8 @@ def download_model_from_s3(local_path="models/model.joblib"):
     except ClientError as e:
         print(f"Could not download model from S3 ({e}), falling back to local file")
         return False
+
+
+def load_holdout_set():
+    df = pd.read_csv("ml/holdout_test_set.csv")
+    return df["text"], df["category"]
