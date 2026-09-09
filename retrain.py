@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import boto3
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
+from sqlalchemy import bindparam
 
 load_dotenv()
 
@@ -26,8 +27,16 @@ S3_MODEL_KEY = "model.joblib"
 
 
 def pull_training_data(db_engine):
+    holdout_df = pd.read_csv("ml/holdout_test_set.csv")
+    holdout_texts = holdout_df["text"].tolist()
+
     with db_engine.connect() as conn:
-        result = conn.execute(text("SELECT text, category FROM training_phrases"))
+        result = conn.execute(
+            text("SELECT text, category FROM training_phrases WHERE text NOT IN :holdout").bindparams(
+                bindparam("holdout", expanding=True)
+            ),
+            {"holdout": holdout_texts}
+        )
         rows = result.fetchall()
     df = pd.DataFrame(rows, columns=["text", "category"])
     return df
