@@ -86,3 +86,8 @@ def test_root_loads():
     with TestClient(app) as client:
         response = client.get("/")
         assert response.status_code == 200
+
+def test_retrain_requires_api_key():
+    with TestClient(app) as client:
+        response = client.post("/retrain")
+        assert response.status_code == 422
