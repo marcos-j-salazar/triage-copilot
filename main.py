@@ -10,9 +10,9 @@ import os
 from dotenv import load_dotenv
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
-from retrain import pull_training_data, train_new_pipeline, evaluate_current_model, backup_current_model, save_new_model, upload_model_to_s3, download_model_from_s3, load_holdout_set
+from retrain import pull_training_data, train_new_pipeline, evaluate_current_model, backup_current_model, save_new_model, upload_model_to_s3, download_model_from_s3, load_holdout_set, run_retrain_cycle
 import time
-
+from apscheduler.schedulers.background import BackgroundScheduler
 
 
 load_dotenv()
@@ -20,6 +20,8 @@ db_engine = create_engine(os.environ["DATABASE_URL"])
 MODEL_PATH = "models/model.joblib"
 ml_model = {}
 STAFF_API_KEY = os.environ["STAFF_API_KEY"]
+scheduler = BackgroundScheduler()
+
 
 # cooldown timer for /retrain
 _last_retrain_time = [0.0]
@@ -28,11 +30,19 @@ def verify_api_key(x_api_key: str = Header(...)):
     if x_api_key != STAFF_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
+def scheduled_retrain_job():
+    result, updated_pipeline = run_retrain_cycle(db_engine, ml_model["pipeline"], log_engine=db_engine)
+    ml_model["pipeline"] = updated_pipeline
+    print(f"Scheduled retrain ran: {result}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     download_model_from_s3()
     ml_model["pipeline"] = joblib.load(MODEL_PATH)
+    scheduler.add_job(scheduled_retrain_job, "interval", hours=1)
+    scheduler.start()
     yield
+    scheduler.shutdown()
     ml_model.clear()
 
 app = FastAPI(title="Staff Triage Copilot", lifespan=lifespan)
@@ -98,33 +108,10 @@ def retrain():
         raise HTTPException(status_code=429, detail="Retrain was run recently, please wait before trying again")
     _last_retrain_time[0] = now
 
-    df = pull_training_data(db_engine)
-    new_pipeline, _, _, _, _ = train_new_pipeline(df)
+    result, updated_pipeline = run_retrain_cycle(db_engine, ml_model["pipeline"], log_engine=db_engine)
+    ml_model["pipeline"] = updated_pipeline
 
-    X_test_fixed, y_test_fixed = load_holdout_set()
-    new_test_acc = new_pipeline.score(X_test_fixed, y_test_fixed)
-    current_test_acc = evaluate_current_model(ml_model["pipeline"], X_test_fixed, y_test_fixed)
-
-    if new_test_acc < current_test_acc:
-        return {
-            "swapped": False,
-            "reason": "New model did not outperform current model",
-            "current_accuracy": round(current_test_acc, 3),
-            "new_accuracy": round(new_test_acc, 3)
-        }
-
-    backup_path = backup_current_model()
-    save_new_model(new_pipeline)
-    ml_model["pipeline"] = new_pipeline
-    s3_upload_success = upload_model_to_s3()
-
-    return {
-        "swapped": True,
-        "backup_saved_to": backup_path,
-        "s3_backup_success": s3_upload_success,
-        "previous_accuracy": round(current_test_acc, 3),
-        "new_accuracy": round(new_test_acc, 3)
-    }
+    return result
 
 @app.get("/admin")
 def admin(request: Request):
