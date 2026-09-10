@@ -97,3 +97,45 @@ def download_model_from_s3(local_path="models/model.joblib"):
 def load_holdout_set():
     df = pd.read_csv("ml/holdout_test_set.csv")
     return df["text"], df["category"]
+
+
+def run_retrain_cycle(db_engine, current_pipeline, log_engine=None):
+    df = pull_training_data(db_engine)
+    new_pipeline, _, _, _, _ = train_new_pipeline(df)
+
+    X_test_fixed, y_test_fixed = load_holdout_set()
+    new_test_acc = new_pipeline.score(X_test_fixed, y_test_fixed)
+    current_test_acc = evaluate_current_model(current_pipeline, X_test_fixed, y_test_fixed)
+
+    if new_test_acc < current_test_acc:
+        result = {
+            "swapped": False,
+            "reason": "New model did not outperform current model",
+            "current_accuracy": f"{current_test_acc:.3f}",
+            "new_accuracy": f"{new_test_acc:.3f}",
+        }
+    else:
+        backup_path = backup_current_model()
+        save_new_model(new_pipeline)
+        s3_upload_success = upload_model_to_s3()
+        result = {
+            "swapped": True,
+            "backup_saved_to": backup_path,
+            "s3_backup_success": s3_upload_success,
+            "previous_accuracy": f"{current_test_acc:.3f}",
+            "new_accuracy": f"{new_test_acc:.3f}"
+        }
+
+    if log_engine is not None:
+        with log_engine.connect() as conn:
+            conn.execute(
+                text("INSERT INTO retrain_log (swapped, previous_accuracy, new_accuracy) VALUES (:swapped, :previous_accuracy, :new_accuracy)"),
+                {
+                    "swapped": result["swapped"],
+                    "previous_accuracy": result.get("previous_accuracy", result.get("current_accuracy")),
+                    "new_accuracy": result["new_accuracy"]
+                }
+            )
+            conn.commit()
+
+    return result, new_pipeline if result["swapped"] else current_pipeline
