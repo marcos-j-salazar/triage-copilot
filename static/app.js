@@ -76,7 +76,7 @@ confirmYesBtn.addEventListener('click', async () => {
       body: JSON.stringify({
         text: currentText,
         correct_category: categoryNameEl.textContent,
-        source: 'confirmed'
+        source: 'staff'
       })
     });
 
@@ -118,7 +118,7 @@ saveCorrectionBtn.addEventListener('click', async () => {
       body: JSON.stringify({
         text: currentText,
         correct_category: correctCategory,
-        source: 'staff_corrected'
+        source: 'staff'
   })
     });
 
