@@ -32,7 +32,7 @@ def pull_training_data(db_engine):
 
     with db_engine.connect() as conn:
         result = conn.execute(
-            text("SELECT text, category FROM training_phrases WHERE text NOT IN :holdout").bindparams(
+            text("SELECT text, category FROM training_phrases WHERE text NOT IN :holdout AND reviewed = TRUE").bindparams(
                 bindparam("holdout", expanding=True)
             ),
             {"holdout": holdout_texts}
