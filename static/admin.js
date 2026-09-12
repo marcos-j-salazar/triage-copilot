@@ -8,7 +8,7 @@ const reviewSection = document.getElementById('review-section');
 
 let allPendingCorrections = [];
 let currentPage = 1;
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 8;
 
 
 
