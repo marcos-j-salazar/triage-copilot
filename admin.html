@@ -4,7 +4,12 @@
 
 {% block content %}
 
-  <main class="panel">
+  <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+    <button type="button" id="tab-retrain" class="btn btn-primary" style="min-width: 180px;">Model Retraining</button>
+    <button type="button" id="tab-review" class="btn btn-outline" style="min-width: 180px;">Pending Corrections</button>
+  </div>
+
+  <main class="panel" id="retrain-section">
 
     <h2 class="category-name">Model Retraining</h2>
     <p class="field-label">
@@ -16,6 +21,19 @@
     <button type="button" id="retrain-btn" class="btn btn-primary">Retrain Model</button>
 
     <div id="retrain-status" class="confirmation-msg" hidden></div>
+
+  </main>
+
+  <main class="panel" id="review-section" hidden>
+
+    <h2 class="category-name">Pending Corrections</h2>
+    <p class="field-label">
+      Corrections submitted by staff, waiting for review before they count
+      toward the next retrain.
+    </p>
+
+    <div id="pending-list"></div>
+    <div id="pagination-controls"></div>
 
   </main>
 

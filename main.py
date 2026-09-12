@@ -65,6 +65,8 @@ class PredictResponse(BaseModel):
     confidence: float
     timestamp: str
 
+class ApproveRequest(BaseModel):
+    id: int
 
 @app.get("/")
 def root(request: Request):
@@ -116,3 +118,39 @@ def retrain():
 @app.get("/admin")
 def admin(request: Request):
     return templates.TemplateResponse(request, "admin.html", {"api_key": STAFF_API_KEY})
+
+@app.get("/admin/pending-corrections")
+def get_pending_corrections(_: None = Depends(verify_api_key)):
+    with db_engine.connect() as conn:
+        result = conn.execute(
+            text("SELECT id, text, category, created_at FROM training_phrases WHERE reviewed = FALSE ORDER BY created_at DESC")
+        )
+        rows = result.fetchall()
+    return [{"id": r[0], "text": r[1], "category": r[2], "created_at": str(r[3])} for r in rows]
+
+@app.post("/admin/approve-correction")
+def approve_correction(request: ApproveRequest, _: None = Depends(verify_api_key)):
+    with db_engine.connect() as conn:
+        conn.execute(
+            text("UPDATE training_phrases SET reviewed = TRUE WHERE id = :id"),
+            {"id": request.id}
+        )
+        conn.commit()
+    return {"status": "approved"}
+
+@app.post("/admin/reject-correction")
+def reject_correction(request: ApproveRequest, _: None = Depends(verify_api_key)):
+    with db_engine.connect() as conn:
+        conn.execute(
+            text("DELETE FROM training_phrases WHERE id = :id"),
+            {"id": request.id}
+        )
+        conn.commit()
+    return {"status": "rejected"}
+
+@app.post("/admin/approve-all-pending")
+def approve_all_pending(_: None = Depends(verify_api_key)):
+    with db_engine.connect() as conn:
+        result = conn.execute(text("UPDATE training_phrases SET reviewed = TRUE WHERE reviewed = FALSE"))
+        conn.commit()
+    return {"status": "approved", "count": result.rowcount}
