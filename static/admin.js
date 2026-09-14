@@ -24,6 +24,8 @@ tabRetrain.addEventListener('click', () => {
   tabRetrain.classList.remove('btn-outline');
   tabReview.classList.add('btn-outline');
   tabReview.classList.remove('btn-primary');
+  tabUpload.classList.add('btn-outline');
+  tabUpload.classList.remove('btn-primary');
 });
 
 tabReview.addEventListener('click', () => {
@@ -34,6 +36,8 @@ tabReview.addEventListener('click', () => {
   tabReview.classList.remove('btn-outline');
   tabRetrain.classList.add('btn-outline');
   tabRetrain.classList.remove('btn-primary');
+  tabUpload.classList.add('btn-outline');
+  tabUpload.classList.remove('btn-primary');
   loadPendingCorrections();
 });
 
