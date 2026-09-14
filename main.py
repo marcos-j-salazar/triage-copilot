@@ -13,7 +13,9 @@ from fastapi import Request
 from retrain import pull_training_data, train_new_pipeline, evaluate_current_model, backup_current_model, save_new_model, upload_model_to_s3, download_model_from_s3, load_holdout_set, run_retrain_cycle
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
-
+import csv
+import io
+from fastapi import UploadFile, File
 
 load_dotenv()
 db_engine = create_engine(os.environ["DATABASE_URL"])
@@ -154,3 +156,35 @@ def approve_all_pending(_: None = Depends(verify_api_key)):
         result = conn.execute(text("UPDATE training_phrases SET reviewed = TRUE WHERE reviewed = FALSE"))
         conn.commit()
     return {"status": "approved", "count": result.rowcount}
+
+@app.post("/admin/upload-csv")
+async def upload_csv(file: UploadFile = File(...), _: None = Depends(verify_api_key)):
+    VALID_CATEGORIES = {
+        "Admissions / Enrollment", "Advising", "Appointment",
+        "ESL Advising", "New Accepted Student / Navigate", "Student Financial Services"
+    }
+
+    contents = await file.read()
+    decoded = contents.decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(decoded))
+
+    inserted = 0
+    skipped = []
+
+    with db_engine.connect() as conn:
+        for row in reader:
+            phrase_text = row.get("Phrase", "").strip()
+            category = row.get("Category", "").strip()
+
+            if not phrase_text or category not in VALID_CATEGORIES:
+                skipped.append(row)
+                continue
+
+            conn.execute(
+                text("INSERT INTO training_phrases (text, category, source, reviewed) VALUES (:phrase, :category, :source, FALSE)"),
+                {"phrase": phrase_text, "category": category, "source": "staff"}
+            )
+            inserted += 1
+        conn.commit()
+
+    return {"inserted": inserted, "skipped": len(skipped), "skipped_rows": skipped}
