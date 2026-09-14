@@ -7,6 +7,7 @@
   <div style="display: flex; gap: 12px; margin-bottom: 20px;">
     <button type="button" id="tab-retrain" class="btn btn-primary" style="min-width: 180px;">Model Retraining</button>
     <button type="button" id="tab-review" class="btn btn-outline" style="min-width: 180px;">Pending Corrections</button>
+    <button type="button" id="tab-upload" class="btn btn-outline" style="min-width: 180px;">Batch Upload</button>
   </div>
 
   <main class="panel" id="retrain-section">
@@ -34,6 +35,21 @@
 
     <div id="pending-list"></div>
     <div id="pagination-controls"></div>
+
+  </main>
+
+  <main class="panel" id="upload-section" hidden>
+
+    <h2 class="category-name">Batch CSV Upload</h2>
+    <p class="field-label">
+      Upload a CSV with Category, Subcategory, Language, and Phrase columns.
+      Valid rows are added as pending corrections; invalid rows are reported below.
+    </p>
+
+    <input type="file" id="csv-file-input" accept=".csv" />
+    <button type="button" id="upload-csv-btn" class="btn btn-primary" style="margin-top: 16px;">Upload</button>
+
+    <div id="upload-result" style="margin-top: 16px;"></div>
 
   </main>
 

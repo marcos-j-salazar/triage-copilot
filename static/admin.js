@@ -4,7 +4,11 @@ const tabRetrain = document.getElementById('tab-retrain');
 const tabReview = document.getElementById('tab-review');
 const retrainSection = document.getElementById('retrain-section');
 const reviewSection = document.getElementById('review-section');
-
+const tabUpload = document.getElementById('tab-upload');
+const uploadSection = document.getElementById('upload-section');
+const csvFileInput = document.getElementById('csv-file-input');
+const uploadCsvBtn = document.getElementById('upload-csv-btn');
+const uploadResult = document.getElementById('upload-result');
 
 let allPendingCorrections = [];
 let currentPage = 1;
@@ -15,6 +19,7 @@ const PAGE_SIZE = 8;
 tabRetrain.addEventListener('click', () => {
   retrainSection.hidden = false;
   reviewSection.hidden = true;
+  uploadSection.hidden = true;
   tabRetrain.classList.add('btn-primary');
   tabRetrain.classList.remove('btn-outline');
   tabReview.classList.add('btn-outline');
@@ -24,12 +29,60 @@ tabRetrain.addEventListener('click', () => {
 tabReview.addEventListener('click', () => {
   retrainSection.hidden = true;
   reviewSection.hidden = false;
+  uploadSection.hidden = true;
   tabReview.classList.add('btn-primary');
   tabReview.classList.remove('btn-outline');
   tabRetrain.classList.add('btn-outline');
   tabRetrain.classList.remove('btn-primary');
   loadPendingCorrections();
 });
+
+tabUpload.addEventListener('click', () => {
+  retrainSection.hidden = true;
+  reviewSection.hidden = true;
+  uploadSection.hidden = false;
+  tabUpload.classList.add('btn-primary');
+  tabUpload.classList.remove('btn-outline');
+  tabRetrain.classList.add('btn-outline');
+  tabRetrain.classList.remove('btn-primary');
+  tabReview.classList.add('btn-outline');
+  tabReview.classList.remove('btn-primary');
+});
+
+uploadCsvBtn.addEventListener('click', async () => {
+  const file = csvFileInput.files[0];
+  if (!file) {
+    uploadResult.textContent = 'Please select a file first.';
+    return;
+  }
+
+  uploadCsvBtn.disabled = true;
+  uploadCsvBtn.textContent = 'Uploading...';
+  uploadResult.textContent = '';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const response = await fetch('/admin/upload-csv', {
+      method: 'POST',
+      headers: { 'x-api-key': STAFF_API_KEY },
+      body: formData
+    });
+    const data = await response.json();
+    uploadResult.innerHTML = `
+      <p style="color: var(--confidence-high);">Inserted: ${data.inserted}</p>
+      <p style="color: var(--confidence-mid);">Skipped: ${data.skipped}</p>
+    `;
+  } catch (err) {
+    uploadResult.textContent = 'Something went wrong. Please try again.';
+    console.log('Error:', err);
+  } finally {
+    uploadCsvBtn.disabled = false;
+    uploadCsvBtn.textContent = 'Upload';
+  }
+});
+
 retrainBtn.addEventListener('click', async () => {
   retrainBtn.disabled = true;
   retrainBtn.textContent = 'Retraining...';
