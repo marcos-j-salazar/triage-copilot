@@ -62,7 +62,7 @@ def store_chunk(document_name, chunk_text, embedding):
         conn.commit()
 
 if __name__ == "__main__":
-    filepath = "nscc_academic_calendar.txt"
+    filepath = "ml/nscc_academic_calendar.txt"
     chunks = chunk_document(filepath)
     print(f"Split into {len(chunks)} chunks")
     for i, chunk in enumerate(chunks):
