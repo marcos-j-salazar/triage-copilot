@@ -10,12 +10,15 @@ import os
 from dotenv import load_dotenv
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
-from retrain import pull_training_data, train_new_pipeline, evaluate_current_model, backup_current_model, save_new_model, upload_model_to_s3, download_model_from_s3, load_holdout_set, run_retrain_cycle
+from retrain import download_model_from_s3, run_retrain_cycle
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
 import csv
 import io
 from fastapi import UploadFile, File
+from pypdf import PdfReader
+from ml.build_embeddings import chunk_document_general, chunk_calendar_text, embed_chunk
+
 
 load_dotenv()
 db_engine = create_engine(os.environ["DATABASE_URL"])
@@ -36,6 +39,25 @@ def scheduled_retrain_job():
     result, updated_pipeline = run_retrain_cycle(db_engine, ml_model["pipeline"], log_engine=db_engine)
     ml_model["pipeline"] = updated_pipeline
     print(f"Scheduled retrain ran: {result}")
+
+def extract_text(file_bytes, filename):
+    if filename.endswith(".pdf"):
+        reader = PdfReader(io.BytesIO(file_bytes))
+        return "\n\n".join(page.extract_text() for page in reader.pages)
+    return file_bytes.decode("utf-8")
+
+def replace_document_chunks(document_name, chunks):
+    with db_engine.connect() as conn:
+        conn.execute(text("DELETE FROM document_chunks WHERE document_name = :doc"), {"doc": document_name})
+        conn.commit()
+    for chunk in chunks:
+        embedding = embed_chunk(chunk)
+        with db_engine.connect() as conn:
+            conn.execute(
+                text("INSERT INTO document_chunks (document_name, chunk_text, embedding) VALUES (:doc, :chunk, :emb)"),
+                {"doc": document_name, "chunk": chunk, "emb": str(embedding)}
+            )
+            conn.commit()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -188,3 +210,19 @@ async def upload_csv(file: UploadFile = File(...), _: None = Depends(verify_api_
         conn.commit()
 
     return {"inserted": inserted, "skipped": len(skipped), "skipped_rows": skipped}
+
+@app.post("/admin/upload-document")
+async def upload_document(file: UploadFile = File(...), _: None = Depends(verify_api_key)):
+    file_bytes = await file.read()
+    full_text = extract_text(file_bytes, file.filename)
+    chunks = chunk_document_general(full_text)
+    replace_document_chunks(file.filename, chunks)
+    return {"document": file.filename, "chunks_created": len(chunks)}
+
+@app.post("/admin/upload-calendar")
+async def upload_calendar(file: UploadFile = File(...), _: None = Depends(verify_api_key)):
+    file_bytes = await file.read()
+    full_text = extract_text(file_bytes, file.filename)
+    chunks = chunk_calendar_text(full_text)
+    replace_document_chunks(file.filename, chunks)
+    return {"document": file.filename, "chunks_created": len(chunks)}

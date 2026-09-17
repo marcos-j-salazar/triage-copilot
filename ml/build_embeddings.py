@@ -29,6 +29,7 @@ def is_header_line(line):
     stripped = line.strip()
     return any(stripped.startswith(h) for h in SECTION_HEADERS)
 
+#txt calendar
 def chunk_document(filepath):
     with open(filepath, "r") as f:
         lines = f.readlines()
@@ -47,6 +48,37 @@ def chunk_document(filepath):
     if current:
         chunks.append("".join(current).strip())
 
+    return [c for c in chunks if c.strip()]
+
+#general documents
+def chunk_document_general(full_text, max_chunk_size=800, overlap=100):
+    paragraphs = [p.strip() for p in full_text.split("\n\n") if p.strip()]
+    chunks = []
+    current = ""
+    for para in paragraphs:
+        if len(current) + len(para) > max_chunk_size and current:
+            chunks.append(current.strip())
+            current = current[-overlap:] + "\n\n" + para
+        else:
+            current += "\n\n" + para
+    if current.strip():
+        chunks.append(current.strip())
+    return chunks
+
+#calender pdfs
+def chunk_calendar_text(full_text):
+    lines = full_text.splitlines(keepends=True)
+    chunks = []
+    current = []
+    for line in lines:
+        if is_header_line(line):
+            if current:
+                chunks.append("".join(current).strip())
+            current = [line]
+        else:
+            current.append(line)
+    if current:
+        chunks.append("".join(current).strip())
     return [c for c in chunks if c.strip()]
 
 def embed_chunk(text_chunk):
