@@ -226,3 +226,20 @@ async def upload_calendar(file: UploadFile = File(...), _: None = Depends(verify
     chunks = chunk_calendar_text(full_text)
     replace_document_chunks(file.filename, chunks)
     return {"document": file.filename, "chunks_created": len(chunks)}
+
+from ml.retrieve import answer_question
+
+class AskRequest(BaseModel):
+    question: str = Field(..., min_length=1)
+
+class AskResponse(BaseModel):
+    answer: str
+    sources: list[str]
+
+@app.post("/ask", response_model=AskResponse)
+def ask(request: AskRequest):
+    try:
+        answer, chunks = answer_question(request.question)
+        return AskResponse(answer=answer, sources=chunks)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to answer question: {str(e)}")
