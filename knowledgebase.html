@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Knowledge Base — Triage Copilot{% endblock %}
+
+{% block content %}
+
+  <main class="panel">
+
+    <h2 class="category-name">Knowledge Base</h2>
+    <p class="field-label">
+      Ask a question about deadlines, policies, or other documents on file.
+    </p>
+
+    <div id="chat-log" style="border: 1px solid #ddd; border-radius: 6px; padding: 16px; min-height: 300px; max-height: 500px; overflow-y: auto; margin-bottom: 12px; background: #fafafa;">
+      <p class="field-label" style="color: #888;">Ask a question below to get started.</p>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+      <textarea id="ask-question-input" placeholder="e.g. When is the deadline to withdraw from a 1st 6-week course?" style="flex: 1; min-height: 44px; padding: 10px; resize: none;"></textarea>
+      <button type="button" id="ask-btn" class="btn btn-primary" style="align-self: flex-end;">Ask</button>
+    </div>
+
+  </main>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/ask.js"></script>
+{% endblock %}

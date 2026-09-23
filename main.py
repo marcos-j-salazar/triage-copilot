@@ -243,3 +243,7 @@ def ask(request: AskRequest):
         return AskResponse(answer=answer, sources=chunks)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to answer question: {str(e)}")
+
+@app.get("/knowledge-base")
+def knowledge_base(request: Request):
+    return templates.TemplateResponse(request, "knowledge_base.html", {"api_key": STAFF_API_KEY})
