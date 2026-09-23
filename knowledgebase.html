@@ -4,23 +4,28 @@
 
 {% block content %}
 
-  <main class="panel">
+<div class="kb-container">
 
+  <div class="kb-header">
     <h2 class="category-name">Knowledge Base</h2>
-    <p class="field-label">
-      Ask a question about deadlines, policies, or other documents on file.
-    </p>
+    <p class="field-label">Ask about deadlines, policies, or other documents on file.</p>
+  </div>
 
-    <div id="chat-log" style="border: 1px solid #ddd; border-radius: 6px; padding: 16px; min-height: 300px; max-height: 500px; overflow-y: auto; margin-bottom: 12px; background: #fafafa;">
-      <p class="field-label" style="color: #888;">Ask a question below to get started.</p>
-    </div>
+  <div id="chat-log" class="kb-log">
+    <div class="chat-empty">Ask a question below to get started.</div>
+  </div>
 
-    <div style="display: flex; gap: 8px;">
-      <textarea id="ask-question-input" placeholder="e.g. When is the deadline to withdraw from a 1st 6-week course?" style="flex: 1; min-height: 44px; padding: 10px; resize: none;"></textarea>
-      <button type="button" id="ask-btn" class="btn btn-primary" style="align-self: flex-end;">Ask</button>
-    </div>
+  <form id="ask-form" class="kb-input-row">
+    <textarea
+      id="ask-question-input"
+      placeholder="Ask a question…"
+      rows="1"
+      required
+    ></textarea>
+    <button type="submit" id="ask-btn" class="btn btn-primary">Ask</button>
+  </form>
 
-  </main>
+</div>
 
 {% endblock %}
 
