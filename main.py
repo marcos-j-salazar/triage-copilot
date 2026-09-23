@@ -246,4 +246,4 @@ def ask(request: AskRequest):
 
 @app.get("/knowledge-base")
 def knowledge_base(request: Request):
-    return templates.TemplateResponse(request, "knowledge_base.html", {"api_key": STAFF_API_KEY})
+    return templates.TemplateResponse(request, "knowledgebase.html", {"api_key": STAFF_API_KEY})
