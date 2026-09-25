@@ -2,89 +2,57 @@ const retrainBtn = document.getElementById('retrain-btn');
 const retrainStatus = document.getElementById('retrain-status');
 const tabRetrain = document.getElementById('tab-retrain');
 const tabReview = document.getElementById('tab-review');
+const tabUpload = document.getElementById('tab-upload');
+const tabRag = document.getElementById('tab-rag');
 const retrainSection = document.getElementById('retrain-section');
 const reviewSection = document.getElementById('review-section');
-const tabUpload = document.getElementById('tab-upload');
 const uploadSection = document.getElementById('upload-section');
-const csvFileInput = document.getElementById('csv-file-input');
-const uploadCsvBtn = document.getElementById('upload-csv-btn');
-const uploadResult = document.getElementById('upload-result');
+const ragSection = document.getElementById('rag-section');
+
+const calendarFileInput = document.getElementById('calendar-file-input');
+const uploadCalendarBtn = document.getElementById('upload-calendar-btn');
+const calendarUploadResult = document.getElementById('calendar-upload-result');
+
+const documentFileInput = document.getElementById('document-file-input');
+const uploadDocumentBtn = document.getElementById('upload-document-btn');
+const documentUploadResult = document.getElementById('document-upload-result');
 
 let allPendingCorrections = [];
 let currentPage = 1;
 const PAGE_SIZE = 8;
 
+function showSection(activeSection, activeTab) {
+  retrainSection.hidden = activeSection !== retrainSection;
+  reviewSection.hidden = activeSection !== reviewSection;
+  uploadSection.hidden = activeSection !== uploadSection;
+  ragSection.hidden = activeSection !== ragSection;
 
+  [tabRetrain, tabReview, tabUpload, tabRag].forEach(tab => {
+    if (tab === activeTab) {
+      tab.classList.add('btn-primary');
+      tab.classList.remove('btn-outline');
+    } else {
+      tab.classList.add('btn-outline');
+      tab.classList.remove('btn-primary');
+    }
+  });
+}
 
 tabRetrain.addEventListener('click', () => {
-  retrainSection.hidden = false;
-  reviewSection.hidden = true;
-  uploadSection.hidden = true;
-  tabRetrain.classList.add('btn-primary');
-  tabRetrain.classList.remove('btn-outline');
-  tabReview.classList.add('btn-outline');
-  tabReview.classList.remove('btn-primary');
-  tabUpload.classList.add('btn-outline');
-  tabUpload.classList.remove('btn-primary');
+  showSection(retrainSection, tabRetrain);
 });
 
 tabReview.addEventListener('click', () => {
-  retrainSection.hidden = true;
-  reviewSection.hidden = false;
-  uploadSection.hidden = true;
-  tabReview.classList.add('btn-primary');
-  tabReview.classList.remove('btn-outline');
-  tabRetrain.classList.add('btn-outline');
-  tabRetrain.classList.remove('btn-primary');
-  tabUpload.classList.add('btn-outline');
-  tabUpload.classList.remove('btn-primary');
+  showSection(reviewSection, tabReview);
   loadPendingCorrections();
 });
 
 tabUpload.addEventListener('click', () => {
-  retrainSection.hidden = true;
-  reviewSection.hidden = true;
-  uploadSection.hidden = false;
-  tabUpload.classList.add('btn-primary');
-  tabUpload.classList.remove('btn-outline');
-  tabRetrain.classList.add('btn-outline');
-  tabRetrain.classList.remove('btn-primary');
-  tabReview.classList.add('btn-outline');
-  tabReview.classList.remove('btn-primary');
+  showSection(uploadSection, tabUpload);
 });
 
-uploadCsvBtn.addEventListener('click', async () => {
-  const file = csvFileInput.files[0];
-  if (!file) {
-    uploadResult.textContent = 'Please select a file first.';
-    return;
-  }
-
-  uploadCsvBtn.disabled = true;
-  uploadCsvBtn.textContent = 'Uploading...';
-  uploadResult.textContent = '';
-
-  const formData = new FormData();
-  formData.append('file', file);
-
-  try {
-    const response = await fetch('/admin/upload-csv', {
-      method: 'POST',
-      headers: { 'x-api-key': STAFF_API_KEY },
-      body: formData
-    });
-    const data = await response.json();
-    uploadResult.innerHTML = `
-      <p style="color: var(--confidence-high);">Inserted: ${data.inserted}</p>
-      <p style="color: var(--confidence-mid);">Skipped: ${data.skipped}</p>
-    `;
-  } catch (err) {
-    uploadResult.textContent = 'Something went wrong. Please try again.';
-    console.log('Error:', err);
-  } finally {
-    uploadCsvBtn.disabled = false;
-    uploadCsvBtn.textContent = 'Upload';
-  }
+tabRag.addEventListener('click', () => {
+  showSection(ragSection, tabRag);
 });
 
 retrainBtn.addEventListener('click', async () => {
@@ -103,15 +71,15 @@ retrainBtn.addEventListener('click', async () => {
     const data = await response.json();
 
     if (response.status === 429) {
-  retrainStatus.style.color = 'var(--confidence-mid)';
-  retrainStatus.textContent = data.detail;
-} else if (data.swapped) {
-  retrainStatus.style.color = 'var(--confidence-high)';
-  retrainStatus.textContent = `Model updated. Previous accuracy: ${data.previous_accuracy}, new accuracy: ${data.new_accuracy}.`;
-} else {
-  retrainStatus.style.color = 'var(--ink-soft)';
-  retrainStatus.textContent = `No update made. New model (${data.new_accuracy}) did not outperform current model (${data.current_accuracy}).`;
-}
+      retrainStatus.style.color = 'var(--confidence-mid)';
+      retrainStatus.textContent = data.detail;
+    } else if (data.swapped) {
+      retrainStatus.style.color = 'var(--confidence-high)';
+      retrainStatus.textContent = `Model updated. Previous accuracy: ${data.previous_accuracy}, new accuracy: ${data.new_accuracy}.`;
+    } else {
+      retrainStatus.style.color = 'var(--ink-soft)';
+      retrainStatus.textContent = `No update made. New model (${data.new_accuracy}) did not outperform current model (${data.current_accuracy}).`;
+    }
 
     retrainStatus.hidden = false;
 
@@ -186,9 +154,7 @@ function renderPendingPage() {
 }
 
 function renderPagination() {
-  const paginationEl = document.getElementById('pagination-controls');
-  paginationEl.innerHTML = '';
-
+  const listEl = document.getElementById('pending-list');
   const totalPages = Math.ceil(allPendingCorrections.length / PAGE_SIZE);
 
   if (totalPages <= 1) return;
@@ -210,5 +176,109 @@ function renderPagination() {
     pagination.appendChild(pageBtn);
   }
 
-  paginationEl.appendChild(pagination);
+  listEl.appendChild(pagination);
 }
+
+document.getElementById('upload-csv-btn').addEventListener('click', async () => {
+  const fileInput = document.getElementById('csv-file-input');
+  const uploadResult = document.getElementById('upload-result');
+  const uploadBtn = document.getElementById('upload-csv-btn');
+
+  const file = fileInput.files[0];
+  if (!file) {
+    uploadResult.textContent = 'Please select a file first.';
+    return;
+  }
+
+  uploadBtn.disabled = true;
+  uploadBtn.textContent = 'Uploading...';
+  uploadResult.textContent = '';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const response = await fetch('/admin/upload-csv', {
+      method: 'POST',
+      headers: { 'x-api-key': STAFF_API_KEY },
+      body: formData
+    });
+    const data = await response.json();
+    uploadResult.innerHTML = `
+      <p style="color: var(--confidence-high);">Inserted: ${data.inserted}</p>
+      <p style="color: var(--confidence-mid);">Skipped: ${data.skipped}</p>
+    `;
+  } catch (err) {
+    uploadResult.textContent = 'Something went wrong. Please try again.';
+    console.log('Error:', err);
+  } finally {
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = 'Upload';
+  }
+});
+
+uploadCalendarBtn.addEventListener('click', async () => {
+  const file = calendarFileInput.files[0];
+  if (!file) {
+    calendarUploadResult.textContent = 'Please select a file first.';
+    return;
+  }
+
+  uploadCalendarBtn.disabled = true;
+  uploadCalendarBtn.textContent = 'Uploading...';
+  calendarUploadResult.textContent = '';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const response = await fetch('/admin/upload-calendar', {
+      method: 'POST',
+      headers: { 'x-api-key': STAFF_API_KEY },
+      body: formData
+    });
+    const data = await response.json();
+    calendarUploadResult.innerHTML = `
+      <p style="color: var(--confidence-high);">Uploaded "${data.document}" — ${data.chunks_created} chunks created.</p>
+    `;
+  } catch (err) {
+    calendarUploadResult.textContent = 'Something went wrong. Please try again.';
+    console.log('Error:', err);
+  } finally {
+    uploadCalendarBtn.disabled = false;
+    uploadCalendarBtn.textContent = 'Upload Calendar';
+  }
+});
+
+uploadDocumentBtn.addEventListener('click', async () => {
+  const file = documentFileInput.files[0];
+  if (!file) {
+    documentUploadResult.textContent = 'Please select a file first.';
+    return;
+  }
+
+  uploadDocumentBtn.disabled = true;
+  uploadDocumentBtn.textContent = 'Uploading...';
+  documentUploadResult.textContent = '';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const response = await fetch('/admin/upload-document', {
+      method: 'POST',
+      headers: { 'x-api-key': STAFF_API_KEY },
+      body: formData
+    });
+    const data = await response.json();
+    documentUploadResult.innerHTML = `
+      <p style="color: var(--confidence-high);">Uploaded "${data.document}" — ${data.chunks_created} chunks created.</p>
+    `;
+  } catch (err) {
+    documentUploadResult.textContent = 'Something went wrong. Please try again.';
+    console.log('Error:', err);
+  } finally {
+    uploadDocumentBtn.disabled = false;
+    uploadDocumentBtn.textContent = 'Upload Document';
+  }
+});

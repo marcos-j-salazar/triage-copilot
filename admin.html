@@ -8,6 +8,7 @@
     <button type="button" id="tab-retrain" class="btn btn-primary" style="min-width: 180px;">Model Retraining</button>
     <button type="button" id="tab-review" class="btn btn-outline" style="min-width: 180px;">Pending Corrections</button>
     <button type="button" id="tab-upload" class="btn btn-outline" style="min-width: 180px;">Batch Upload</button>
+    <button type="button" id="tab-rag" class="btn btn-outline" style="min-width: 180px;">Knowledge Base</button>
   </div>
 
   <main class="panel" id="retrain-section">
@@ -50,6 +51,30 @@
     <button type="button" id="upload-csv-btn" class="btn btn-primary" style="margin-top: 16px;">Upload</button>
 
     <div id="upload-result" style="margin-top: 16px;"></div>
+
+  </main>
+
+  <main class="panel" id="rag-section" hidden>
+
+    <h2 class="category-name">Knowledge Base</h2>
+    <p class="field-label">
+      Upload institutional documents so staff can get accurate, sourced
+      answers to questions about deadlines and policies.
+    </p>
+
+    <div style="margin-bottom: 20px;">
+      <p class="field-label"><strong>Upload Academic Calendar</strong></p>
+      <input type="file" id="calendar-file-input" accept=".pdf,.txt" />
+      <button type="button" id="upload-calendar-btn" class="btn btn-primary" style="margin-top: 8px;">Upload Calendar</button>
+      <div id="calendar-upload-result" style="margin-top: 8px;"></div>
+    </div>
+
+    <div>
+      <p class="field-label"><strong>Upload General Document</strong></p>
+      <input type="file" id="document-file-input" accept=".pdf,.txt" />
+      <button type="button" id="upload-document-btn" class="btn btn-primary" style="margin-top: 8px;">Upload Document</button>
+      <div id="document-upload-result" style="margin-top: 8px;"></div>
+    </div>
 
   </main>
 
