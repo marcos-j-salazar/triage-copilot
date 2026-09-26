@@ -2,32 +2,64 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>{% block title %}Triage Copilot{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-<div id="sidebar-overlay" class="sidebar-overlay" hidden></div>
+<div class="app">
 
-<nav id="sidebar" class="sidebar" hidden>
-  <a href="/" class="sidebar-link">Predict</a>
-  <a href="/knowledge-base" class="sidebar-link">Knowledge Base</a>
-  <a href="/admin" class="sidebar-link">Admin</a>
-</nav>
+  <div id="sidebar-overlay" class="sidebar-overlay" hidden></div>
 
-<div class="page">
+  <nav id="sidebar" class="rail" aria-label="Main navigation">
+    <div class="brand">
+      <div class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M4 12h16M4 17h7"/><circle cx="18" cy="7" r="2"/></svg></div>
+      <span class="brand-name">Triage Copilot</span>
+    </div>
+    <a href="/" class="new-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      New student inquiry
+    </a>
 
-  <header class="header">
-    <button type="button" id="menu-btn" class="menu-btn" aria-label="Open menu">
-      <span></span><span></span><span></span>
-    </button>
-    <span class="wordmark">Triage Copilot</span>
-    <span class="context">{% block context %}{% endblock %}</span>
-  </header>
+    <div class="rail-group">Front desk</div>
+    <a href="/" class="nav-item"{% if request.url.path == "/" %} aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Route a request
+    </a>
+    <a href="/knowledge-base" class="nav-item"{% if request.url.path == "/knowledge-base" %} aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Knowledge base
+    </a>
 
-  {% block content %}{% endblock %}
+    <div class="rail-group">Admin</div>
+    {# Active state for these is set by admin.js from the URL hash #}
+    <a href="/admin#retrain" id="tab-retrain" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Model retraining
+    </a>
+    <a href="/admin#review" id="tab-review" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Pending corrections<span id="pending-badge" class="badge" hidden></span>
+    </a>
+    <a href="/admin#upload" id="tab-upload" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 10h16M10 4v16"/></svg>Batch CSV upload
+    </a>
+    <a href="/admin#documents" id="tab-rag" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>Documents
+    </a>
+  </nav>
+
+  <div class="main">
+    <header class="topbar">
+      <button type="button" id="menu-btn" class="menu-toggle" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <span class="topbar-title">{% block context %}{% endblock %}</span>
+    </header>
+
+    <div class="view {% block view_class %}{% endblock %}">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
 
 </div>
 

@@ -17,9 +17,23 @@ const documentFileInput = document.getElementById('document-file-input');
 const uploadDocumentBtn = document.getElementById('upload-document-btn');
 const documentUploadResult = document.getElementById('document-upload-result');
 
+const pendingBadge = document.getElementById('pending-badge');
+const paginationControls = document.getElementById('pagination-controls');
+const pendingToolbar = document.getElementById('pending-toolbar');
+const approveAllBtn = document.getElementById('approve-all-btn');
+const approveAllStatus = document.getElementById('approve-all-status');
+
 let allPendingCorrections = [];
 let currentPage = 1;
 const PAGE_SIZE = 8;
+
+
+const SECTIONS = {
+  retrain: [retrainSection, tabRetrain],
+  review: [reviewSection, tabReview],
+  upload: [uploadSection, tabUpload],
+  documents: [ragSection, tabRag]
+};
 
 function showSection(activeSection, activeTab) {
   retrainSection.hidden = activeSection !== retrainSection;
@@ -29,31 +43,22 @@ function showSection(activeSection, activeTab) {
 
   [tabRetrain, tabReview, tabUpload, tabRag].forEach(tab => {
     if (tab === activeTab) {
-      tab.classList.add('btn-primary');
-      tab.classList.remove('btn-outline');
+      tab.setAttribute('aria-current', 'page');
     } else {
-      tab.classList.add('btn-outline');
-      tab.classList.remove('btn-primary');
+      tab.removeAttribute('aria-current');
     }
   });
 }
 
-tabRetrain.addEventListener('click', () => {
-  showSection(retrainSection, tabRetrain);
-});
+function showSectionFromHash() {
+  const [section, tab] = SECTIONS[location.hash.slice(1)] || SECTIONS.retrain;
+  showSection(section, tab);
+  if (section === reviewSection) {
+    loadPendingCorrections();
+  }
+}
 
-tabReview.addEventListener('click', () => {
-  showSection(reviewSection, tabReview);
-  loadPendingCorrections();
-});
-
-tabUpload.addEventListener('click', () => {
-  showSection(uploadSection, tabUpload);
-});
-
-tabRag.addEventListener('click', () => {
-  showSection(ragSection, tabRag);
-});
+window.addEventListener('hashchange', showSectionFromHash);
 
 retrainBtn.addEventListener('click', async () => {
   retrainBtn.disabled = true;
@@ -84,6 +89,7 @@ retrainBtn.addEventListener('click', async () => {
     retrainStatus.hidden = false;
 
   } catch (err) {
+    retrainStatus.style.color = 'var(--error)';
     retrainStatus.textContent = 'Something went wrong. Please try again.';
     retrainStatus.hidden = false;
     console.log('Error:', err);
@@ -99,15 +105,23 @@ async function loadPendingCorrections() {
   });
   allPendingCorrections = await response.json();
   currentPage = 1;
+  updatePendingBadge();
   renderPendingPage();
+}
+
+function updatePendingBadge() {
+  pendingBadge.textContent = allPendingCorrections.length;
+  pendingBadge.hidden = allPendingCorrections.length === 0;
 }
 
 function renderPendingPage() {
   const listEl = document.getElementById('pending-list');
   listEl.innerHTML = '';
+  paginationControls.innerHTML = '';
+  pendingToolbar.hidden = allPendingCorrections.length === 0;
 
   if (allPendingCorrections.length === 0) {
-    listEl.innerHTML = '<p class="field-label">No pending corrections.</p>';
+    listEl.innerHTML = '<p class="empty-note">No pending corrections.</p>';
     return;
   }
 
@@ -117,14 +131,17 @@ function renderPendingPage() {
 
   pageItems.forEach(c => {
     const item = document.createElement('div');
-    item.style.marginBottom = '16px';
-    item.style.paddingBottom = '16px';
-    item.style.borderBottom = '1px solid var(--line)';
+    item.className = 'pend';
     item.innerHTML = `
-      <p><strong>${c.category}</strong>: ${c.text}</p>
-      <button type="button" class="btn btn-primary approve-btn" data-id="${c.id}">Approve</button>
-      <button type="button" class="btn btn-outline reject-btn" data-id="${c.id}">Reject</button>
+      <div class="pend-text"><b></b><div></div></div>
+      <div class="pend-actions">
+        <button type="button" class="btn btn-good approve-btn" data-id="${c.id}">Approve</button>
+        <button type="button" class="btn btn-bad reject-btn" data-id="${c.id}">Reject</button>
+      </div>
     `;
+
+    item.querySelector('.pend-text b').textContent = c.category;
+    item.querySelector('.pend-text div').textContent = c.text;
     listEl.appendChild(item);
   });
 
@@ -154,30 +171,50 @@ function renderPendingPage() {
 }
 
 function renderPagination() {
-  const listEl = document.getElementById('pending-list');
   const totalPages = Math.ceil(allPendingCorrections.length / PAGE_SIZE);
 
   if (totalPages <= 1) return;
-
-  const pagination = document.createElement('div');
-  pagination.style.marginTop = '16px';
-  pagination.style.display = 'flex';
-  pagination.style.gap = '8px';
 
   for (let i = 1; i <= totalPages; i++) {
     const pageBtn = document.createElement('button');
     pageBtn.type = 'button';
     pageBtn.textContent = i;
-    pageBtn.className = i === currentPage ? 'btn btn-primary' : 'btn btn-outline';
+    if (i === currentPage) pageBtn.setAttribute('aria-current', 'true');
     pageBtn.addEventListener('click', () => {
       currentPage = i;
       renderPendingPage();
     });
-    pagination.appendChild(pageBtn);
+    paginationControls.appendChild(pageBtn);
   }
-
-  listEl.appendChild(pagination);
 }
+
+approveAllBtn.addEventListener('click', async () => {
+
+  approveAllBtn.disabled = true;
+  approveAllBtn.textContent = 'Approving...';
+  approveAllStatus.textContent = '';
+
+  try {
+    const response = await fetch('/admin/approve-all-pending', {
+      method: 'POST',
+      headers: { 'x-api-key': STAFF_API_KEY }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    await loadPendingCorrections();
+    // Toolbar is hidden once the list is empty, so report the result in the empty state
+    if (allPendingCorrections.length === 0) {
+      document.getElementById('pending-list').innerHTML =
+        `<p class="empty-note">Approved ${data.count} corrections. No pending corrections.</p>`;
+    }
+  } catch (err) {
+    approveAllStatus.textContent = 'Something went wrong. Please try again.';
+    console.log('Error:', err);
+  } finally {
+    approveAllBtn.disabled = false;
+    approveAllBtn.textContent = 'Approve all';
+  }
+});
 
 document.getElementById('upload-csv-btn').addEventListener('click', async () => {
   const fileInput = document.getElementById('csv-file-input');
@@ -208,6 +245,7 @@ document.getElementById('upload-csv-btn').addEventListener('click', async () => 
       <p style="color: var(--confidence-high);">Inserted: ${data.inserted}</p>
       <p style="color: var(--confidence-mid);">Skipped: ${data.skipped}</p>
     `;
+    loadPendingCorrections();
   } catch (err) {
     uploadResult.textContent = 'Something went wrong. Please try again.';
     console.log('Error:', err);
@@ -282,3 +320,9 @@ uploadDocumentBtn.addEventListener('click', async () => {
     uploadDocumentBtn.textContent = 'Upload Document';
   }
 });
+
+showSectionFromHash();
+
+if (reviewSection.hidden) {
+  loadPendingCorrections();
+}

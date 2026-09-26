@@ -2,81 +2,101 @@
 
 {% block title %}Admin - Triage Copilot{% endblock %}
 
+{% block context %}Admin{% endblock %}
+
 {% block content %}
 
-  <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-    <button type="button" id="tab-retrain" class="btn btn-primary" style="min-width: 180px;">Model Retraining</button>
-    <button type="button" id="tab-review" class="btn btn-outline" style="min-width: 180px;">Pending Corrections</button>
-    <button type="button" id="tab-upload" class="btn btn-outline" style="min-width: 180px;">Batch Upload</button>
-    <button type="button" id="tab-rag" class="btn btn-outline" style="min-width: 180px;">Knowledge Base</button>
-  </div>
-
-  <main class="panel" id="retrain-section">
-
-    <h2 class="category-name">Model Retraining</h2>
-    <p class="field-label">
-      Pulls the latest staff corrections and confirmations, retrains the
-      model, and replaces the live model only if the new one performs
-      better. This can take one to two minutes.
-    </p>
-
-    <button type="button" id="retrain-btn" class="btn btn-primary">Retrain Model</button>
-
-    <div id="retrain-status" class="confirmation-msg" hidden></div>
-
-  </main>
-
-  <main class="panel" id="review-section" hidden>
-
-    <h2 class="category-name">Pending Corrections</h2>
-    <p class="field-label">
-      Corrections submitted by staff, waiting for review before they count
-      toward the next retrain.
-    </p>
-
-    <div id="pending-list"></div>
-    <div id="pagination-controls"></div>
-
-  </main>
-
-  <main class="panel" id="upload-section" hidden>
-
-    <h2 class="category-name">Batch CSV Upload</h2>
-    <p class="field-label">
-      Upload a CSV with Category, Subcategory, Language, and Phrase columns.
-      Valid rows are added as pending corrections. Invalid rows are reported below.
-    </p>
-
-    <input type="file" id="csv-file-input" accept=".csv" />
-    <button type="button" id="upload-csv-btn" class="btn btn-primary" style="margin-top: 16px;">Upload</button>
-
-    <div id="upload-result" style="margin-top: 16px;"></div>
-
-  </main>
-
-  <main class="panel" id="rag-section" hidden>
-
-    <h2 class="category-name">Knowledge Base</h2>
-    <p class="field-label">
-      Upload institutional documents so staff can get accurate, sourced
-      answers to questions about deadlines and policies.
-    </p>
-
-    <div style="margin-bottom: 20px;">
-      <p class="field-label"><strong>Upload Academic Calendar</strong></p>
-      <input type="file" id="calendar-file-input" accept=".pdf,.txt" />
-      <button type="button" id="upload-calendar-btn" class="btn btn-primary" style="margin-top: 8px;">Upload Calendar</button>
-      <div id="calendar-upload-result" style="margin-top: 8px;"></div>
+  <section class="admin" id="retrain-section">
+    <div class="page-head">
+      <h2>Model retraining</h2>
+      <p>
+        Pulls the latest staff corrections and confirmations, retrains the
+        model, and replaces the live model only if the new one performs
+        better.
+      </p>
     </div>
-
-    <div>
-      <p class="field-label"><strong>Upload General Document</strong></p>
-      <input type="file" id="document-file-input" accept=".pdf,.txt" />
-      <button type="button" id="upload-document-btn" class="btn btn-primary" style="margin-top: 8px;">Upload Document</button>
-      <div id="document-upload-result" style="margin-top: 8px;"></div>
+    <div class="card">
+      <div class="card-actions">
+        <button type="button" id="retrain-btn" class="btn btn-primary">Retrain Model</button>
+        <span class="hint">This can take one to two minutes.</span>
+      </div>
+      <div id="retrain-status" class="status-line" hidden aria-live="polite"></div>
     </div>
+  </section>
 
-  </main>
+  <section class="admin" id="review-section" hidden>
+    <div class="page-head">
+      <h2>Pending corrections</h2>
+      <p>
+        Corrections submitted by staff, waiting for review before they count
+        toward the next retrain.
+      </p>
+    </div>
+    <div class="card">
+      <div id="pending-toolbar" class="card-actions pending-toolbar" hidden>
+        <button type="button" id="approve-all-btn" class="btn btn-good">Approve all</button>
+        <span id="approve-all-status" class="hint" aria-live="polite"></span>
+      </div>
+      <div id="pending-list" class="pending"></div>
+      <div id="pagination-controls" class="pager"></div>
+    </div>
+  </section>
+
+  <section class="admin" id="upload-section" hidden>
+    <div class="page-head">
+      <h2>Batch CSV upload</h2>
+      <p>
+        Upload a CSV with Category, Subcategory, Language, and Phrase columns.
+        Valid rows are added as pending corrections. Invalid rows are reported below.
+      </p>
+    </div>
+    <div class="card">
+      <label class="drop">
+        Choose a CSV of corrections
+        <input type="file" id="csv-file-input" accept=".csv" />
+      </label>
+      <div class="card-actions">
+        <button type="button" id="upload-csv-btn" class="btn btn-primary">Upload</button>
+      </div>
+      <div id="upload-result" class="upload-result" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="admin" id="rag-section" hidden>
+    <div class="page-head">
+      <h2>Documents</h2>
+      <p>
+        Upload institutional documents so staff can get accurate, sourced
+        answers to questions about deadlines and policies.
+      </p>
+    </div>
+    <div class="two">
+      <div class="card">
+        <h3>Academic calendar</h3>
+        <p class="sub">PDF or text file.</p>
+        <label class="drop">
+          Choose a calendar file
+          <input type="file" id="calendar-file-input" accept=".pdf,.txt" />
+        </label>
+        <div class="card-actions">
+          <button type="button" id="upload-calendar-btn" class="btn btn-primary">Upload Calendar</button>
+        </div>
+        <div id="calendar-upload-result" class="upload-result" aria-live="polite"></div>
+      </div>
+      <div class="card">
+        <h3>General document</h3>
+        <p class="sub">PDF or text file.</p>
+        <label class="drop">
+          Choose a document
+          <input type="file" id="document-file-input" accept=".pdf,.txt" />
+        </label>
+        <div class="card-actions">
+          <button type="button" id="upload-document-btn" class="btn btn-primary">Upload Document</button>
+        </div>
+        <div id="document-upload-result" class="upload-result" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
 
 {% endblock %}
 
