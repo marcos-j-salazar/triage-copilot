@@ -64,6 +64,12 @@ def replace_document_chunks(document_name, chunks):
             )
             conn.commit()
 
+def current_user_or_none(request: Request):
+    try:
+        return get_current_user(request)
+    except HTTPException:
+        return None
+    
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     download_model_from_s3()
@@ -99,6 +105,8 @@ class ApproveRequest(BaseModel):
 
 @app.get("/")
 def root(request: Request):
+    if current_user_or_none(request) is None:
+        return RedirectResponse("/login?next=/", status_code=303)
     return templates.TemplateResponse(request, "index.html", {"api_key": STAFF_API_KEY})
 
 @app.get("/health")
@@ -146,6 +154,11 @@ def retrain():
 
 @app.get("/admin")
 def admin(request: Request):
+    user = current_user_or_none(request)
+    if user is None:
+        return RedirectResponse("/login?next=/admin", status_code=303)
+    if user["role"] != "admin":
+        return RedirectResponse("/", status_code=303)
     return templates.TemplateResponse(request, "admin.html", {"api_key": STAFF_API_KEY})
 
 @app.get("/admin/pending-corrections")
@@ -251,6 +264,8 @@ def ask(request: AskRequest):
 
 @app.get("/knowledge-base")
 def knowledge_base(request: Request):
+    if current_user_or_none(request) is None:
+        return RedirectResponse("/login?next=/knowledge-base", status_code=303)
     return templates.TemplateResponse(request, "knowledgebase.html", {"api_key": STAFF_API_KEY})
 
 def get_current_user(request: Request):
@@ -275,8 +290,9 @@ def require_admin(user: dict = Depends(get_current_user)):
 
 @app.get("/login")
 def login_page(request: Request, next: str = "/"):
+    if current_user_or_none(request) is not None:
+        return RedirectResponse(safe_next(next), status_code=303)
     return templates.TemplateResponse(request, "login.html", {"next": safe_next(next), "error": None})
-
 
 @app.post("/login")
 def login(
