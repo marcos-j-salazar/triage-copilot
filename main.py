@@ -18,7 +18,12 @@ import io
 from fastapi import UploadFile, File
 from pypdf import PdfReader
 from ml.build_embeddings import chunk_document_general, chunk_calendar_text, embed_chunk
-
+from fastapi import Form
+from fastapi.responses import RedirectResponse
+from auth import (
+    SESSION_COOKIE, REMEMBER_SECONDS, COOKIE_SECURE, DUMMY_HASH,
+    verify_password, make_session_token, read_session_token, safe_next,
+)
 
 load_dotenv()
 db_engine = create_engine(os.environ["DATABASE_URL"])
@@ -247,3 +252,75 @@ def ask(request: AskRequest):
 @app.get("/knowledge-base")
 def knowledge_base(request: Request):
     return templates.TemplateResponse(request, "knowledgebase.html", {"api_key": STAFF_API_KEY})
+
+def get_current_user(request: Request):
+    token = request.cookies.get(SESSION_COOKIE)
+    user_id = read_session_token(token) if token else None
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Not logged in")
+    with db_engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT id, username, role FROM users WHERE id = :id"), {"id": user_id}
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=401, detail="Not logged in")
+    return {"id": row[0], "username": row[1], "role": row[2]}
+
+
+def require_admin(user: dict = Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+
+@app.get("/login")
+def login_page(request: Request, next: str = "/"):
+    return templates.TemplateResponse(request, "login.html", {"next": safe_next(next), "error": None})
+
+
+@app.post("/login")
+def login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    remember: str | None = Form(None),
+    next: str = Form("/"),
+):
+    with db_engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT id, password_hash FROM users WHERE username = :u"),
+            {"u": username.strip()},
+        ).fetchone()
+
+    password_ok = verify_password(password, row[1] if row else DUMMY_HASH)
+    if row is None or not password_ok:
+        return templates.TemplateResponse(
+            request, "login.html",
+            {"next": safe_next(next), "error": "Incorrect username or password."},
+            status_code=401,
+        )
+
+    keep = remember is not None
+    response = RedirectResponse(safe_next(next), status_code=303)
+    response.set_cookie(
+        SESSION_COOKIE,
+        make_session_token(row[0], keep),
+        max_age=REMEMBER_SECONDS if keep else None,
+        httponly=True,
+        samesite="lax",
+        secure=COOKIE_SECURE,
+        path="/",
+    )
+    return response
+
+
+@app.post("/logout")
+def logout():
+    response = RedirectResponse("/login", status_code=303)
+    response.delete_cookie(SESSION_COOKIE, path="/")
+    return response
+
+
+@app.get("/me")
+def me(user: dict = Depends(get_current_user)):
+    return user

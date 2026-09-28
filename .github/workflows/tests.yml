@@ -28,6 +28,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
         run: pytest
 
   deploy:

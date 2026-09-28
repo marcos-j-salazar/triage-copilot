@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign in - Triage Copilot</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  .login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+  .login-card { width: 100%; max-width: 380px; }
+  .login-card h2 { font-family: "Space Grotesk", sans-serif; margin: 0 0 4px; }
+  .login-card label { display: block; font-size: 14px; font-weight: 500; margin: 14px 0 6px; }
+  .login-card input[type="text"], .login-card input[type="password"] {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px;
+    background: transparent; font: inherit; color: inherit;
+  }
+  .remember { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px; }
+  .login-error { color: var(--error); font-size: 14px; margin-top: 12px; }
+  .login-card .btn { width: 100%; margin-top: 18px; }
+</style>
+</head>
+<body>
+<main class="login-wrap">
+  <form method="post" action="/login" class="card login-card">
+    <h2>Sign in</h2>
+    <p class="hint">Triage Copilot staff access</p>
+
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" autocomplete="username" required autofocus>
+
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" autocomplete="current-password" required>
+
+    <label class="remember">
+      <input type="checkbox" name="remember"> Remember me for 14 days
+    </label>
+
+    <input type="hidden" name="next" value="{{ next }}">
+
+    {% if error %}<p class="login-error" role="alert">{{ error }}</p>{% endif %}
+
+    <button type="submit" class="btn btn-primary">Sign in</button>
+  </form>
+</main>
+</body>
+</html>
