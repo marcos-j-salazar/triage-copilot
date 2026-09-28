@@ -40,6 +40,31 @@ def verify_api_key(x_api_key: str = Header(...)):
     if x_api_key != STAFF_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
+def get_current_user(request: Request):
+    token = request.cookies.get(SESSION_COOKIE)
+    user_id = read_session_token(token) if token else None
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Not logged in")
+    with db_engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT id, username, role FROM users WHERE id = :id"), {"id": user_id}
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=401, detail="Not logged in")
+    return {"id": row[0], "username": row[1], "role": row[2]}
+
+
+def require_admin(user: dict = Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+def current_user_or_none(request: Request):
+    try:
+        return get_current_user(request)
+    except HTTPException:
+        return None
+    
 def scheduled_retrain_job():
     result, updated_pipeline = run_retrain_cycle(db_engine, ml_model["pipeline"], log_engine=db_engine)
     ml_model["pipeline"] = updated_pipeline
@@ -63,12 +88,6 @@ def replace_document_chunks(document_name, chunks):
                 {"doc": document_name, "chunk": chunk, "emb": str(embedding)}
             )
             conn.commit()
-
-def current_user_or_none(request: Request):
-    try:
-        return get_current_user(request)
-    except HTTPException:
-        return None
     
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -140,7 +159,7 @@ def update_data(request: UpdateDataRequest, _: None = Depends(verify_api_key)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save correction: {str(e)}")
 
-@app.post("/retrain", dependencies=[Depends(verify_api_key)])
+@app.post("/retrain", dependencies=[Depends(require_admin)])
 def retrain():
     now = time.time()
     if now - _last_retrain_time[0] < 300:
@@ -267,26 +286,6 @@ def knowledge_base(request: Request):
     if current_user_or_none(request) is None:
         return RedirectResponse("/login?next=/knowledge-base", status_code=303)
     return templates.TemplateResponse(request, "knowledgebase.html", {"api_key": STAFF_API_KEY})
-
-def get_current_user(request: Request):
-    token = request.cookies.get(SESSION_COOKIE)
-    user_id = read_session_token(token) if token else None
-    if user_id is None:
-        raise HTTPException(status_code=401, detail="Not logged in")
-    with db_engine.connect() as conn:
-        row = conn.execute(
-            text("SELECT id, username, role FROM users WHERE id = :id"), {"id": user_id}
-        ).fetchone()
-    if row is None:
-        raise HTTPException(status_code=401, detail="Not logged in")
-    return {"id": row[0], "username": row[1], "role": row[2]}
-
-
-def require_admin(user: dict = Depends(get_current_user)):
-    if user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return user
-
 
 @app.get("/login")
 def login_page(request: Request, next: str = "/"):
