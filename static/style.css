@@ -421,4 +421,23 @@ select {
   .correct select { min-width: 0; width: 100%; }
 }
 
+.rail-user { 
+  margin-top: auto; 
+  padding: 12px 10px 4px; 
+  font-size: 13px; 
+  color: var(--ink-soft); 
+  display: flex; 
+  flex-direction: column; 
+  gap: 8px; 
+}
+.logout-btn { 
+  align-self: flex-start; 
+  border: 1px solid var(--line); 
+  background: transparent; 
+  color: inherit; 
+  border-radius: 9px; 
+  padding: 6px 12px; 
+  font: inherit; 
+  cursor: pointer; 
+}
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
