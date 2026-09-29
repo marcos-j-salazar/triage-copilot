@@ -133,7 +133,7 @@ def health():
     return {"status": "healthy", "model_loaded": "pipeline" in ml_model}
 
 @app.post("/predict", response_model=PredictResponse)
-def predict(request: PredictRequest):
+def predict(request: PredictRequest, _: dict = Depends(get_current_user)):
     try:
         pipeline = ml_model["pipeline"]
         category = pipeline.predict([request.text])[0]
@@ -147,7 +147,7 @@ def predict(request: PredictRequest):
         raise HTTPException(status_code=500, detail=f"Inference failed: {str(e)}")
     
 @app.post("/update-data")
-def update_data(request: UpdateDataRequest, _: None = Depends(verify_api_key)):
+def update_data(request: UpdateDataRequest, _: dict = Depends(get_current_user)):
     try:
         with db_engine.connect() as conn:
             conn.execute(
@@ -181,7 +181,7 @@ def admin(request: Request):
     return templates.TemplateResponse(request, "admin.html", {"api_key": STAFF_API_KEY})
 
 @app.get("/admin/pending-corrections")
-def get_pending_corrections(_: None = Depends(verify_api_key)):
+def get_pending_corrections(_: dict = Depends(require_admin)):
     with db_engine.connect() as conn:
         result = conn.execute(
             text("SELECT id, text, category, created_at FROM training_phrases WHERE reviewed = FALSE ORDER BY created_at DESC")
@@ -190,7 +190,7 @@ def get_pending_corrections(_: None = Depends(verify_api_key)):
     return [{"id": r[0], "text": r[1], "category": r[2], "created_at": str(r[3])} for r in rows]
 
 @app.post("/admin/approve-correction")
-def approve_correction(request: ApproveRequest, _: None = Depends(verify_api_key)):
+def approve_correction(request: ApproveRequest, _: dict = Depends(require_admin)):
     with db_engine.connect() as conn:
         conn.execute(
             text("UPDATE training_phrases SET reviewed = TRUE WHERE id = :id"),
@@ -200,7 +200,7 @@ def approve_correction(request: ApproveRequest, _: None = Depends(verify_api_key
     return {"status": "approved"}
 
 @app.post("/admin/reject-correction")
-def reject_correction(request: ApproveRequest, _: None = Depends(verify_api_key)):
+def reject_correction(request: ApproveRequest, _: dict = Depends(require_admin)):
     with db_engine.connect() as conn:
         conn.execute(
             text("DELETE FROM training_phrases WHERE id = :id"),
@@ -210,14 +210,14 @@ def reject_correction(request: ApproveRequest, _: None = Depends(verify_api_key)
     return {"status": "rejected"}
 
 @app.post("/admin/approve-all-pending")
-def approve_all_pending(_: None = Depends(verify_api_key)):
+def approve_all_pending(_: dict = Depends(require_admin)):
     with db_engine.connect() as conn:
         result = conn.execute(text("UPDATE training_phrases SET reviewed = TRUE WHERE reviewed = FALSE"))
         conn.commit()
     return {"status": "approved", "count": result.rowcount}
 
 @app.post("/admin/upload-csv")
-async def upload_csv(file: UploadFile = File(...), _: None = Depends(verify_api_key)):
+async def upload_csv(file: UploadFile = File(...), _: dict = Depends(require_admin)):
     VALID_CATEGORIES = {
         "Admissions / Enrollment", "Advising", "Appointment",
         "ESL Advising", "New Accepted Student / Navigate", "Student Financial Services"
@@ -249,7 +249,7 @@ async def upload_csv(file: UploadFile = File(...), _: None = Depends(verify_api_
     return {"inserted": inserted, "skipped": len(skipped), "skipped_rows": skipped}
 
 @app.post("/admin/upload-document")
-async def upload_document(file: UploadFile = File(...), _: None = Depends(verify_api_key)):
+async def upload_document(file: UploadFile = File(...), _: dict = Depends(require_admin)):
     file_bytes = await file.read()
     full_text = extract_text(file_bytes, file.filename)
     chunks = chunk_document_general(full_text)
@@ -257,7 +257,7 @@ async def upload_document(file: UploadFile = File(...), _: None = Depends(verify
     return {"document": file.filename, "chunks_created": len(chunks)}
 
 @app.post("/admin/upload-calendar")
-async def upload_calendar(file: UploadFile = File(...), _: None = Depends(verify_api_key)):
+async def upload_calendar(file: UploadFile = File(...), _: dict = Depends(require_admin)):
     file_bytes = await file.read()
     full_text = extract_text(file_bytes, file.filename)
     chunks = chunk_calendar_text(full_text)
@@ -274,7 +274,7 @@ class AskResponse(BaseModel):
     sources: list[str]
 
 @app.post("/ask", response_model=AskResponse)
-def ask(request: AskRequest):
+def ask(request: AskRequest, _: dict = Depends(get_current_user)):
     try:
         answer, chunks = answer_question(request.question)
         return AskResponse(answer=answer, sources=chunks)
