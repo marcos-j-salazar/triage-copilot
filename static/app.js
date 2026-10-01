@@ -70,8 +70,7 @@ confirmYesBtn.addEventListener('click', async () => {
     const response = await fetch('/update-data', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': STAFF_API_KEY
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         text: currentText,
@@ -112,8 +111,7 @@ saveCorrectionBtn.addEventListener('click', async () => {
     const response = await fetch('/update-data', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': STAFF_API_KEY
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         text: currentText,

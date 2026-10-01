@@ -68,9 +68,6 @@ retrainBtn.addEventListener('click', async () => {
   try {
     const response = await fetch('/retrain', {
       method: 'POST',
-      headers: {
-        'x-api-key': STAFF_API_KEY
-      }
     });
 
     const data = await response.json();
@@ -100,9 +97,7 @@ retrainBtn.addEventListener('click', async () => {
 });
 
 async function loadPendingCorrections() {
-  const response = await fetch('/admin/pending-corrections', {
-    headers: { 'x-api-key': STAFF_API_KEY }
-  });
+  const response = await fetch('/admin/pending-corrections');
   allPendingCorrections = await response.json();
   currentPage = 1;
   updatePendingBadge();
@@ -149,7 +144,7 @@ function renderPendingPage() {
     btn.addEventListener('click', async () => {
       await fetch('/admin/approve-correction', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': STAFF_API_KEY },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: parseInt(btn.dataset.id) })
       });
       loadPendingCorrections();
@@ -160,7 +155,7 @@ function renderPendingPage() {
     btn.addEventListener('click', async () => {
       await fetch('/admin/reject-correction', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': STAFF_API_KEY },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: parseInt(btn.dataset.id) })
       });
       loadPendingCorrections();
@@ -196,8 +191,7 @@ approveAllBtn.addEventListener('click', async () => {
 
   try {
     const response = await fetch('/admin/approve-all-pending', {
-      method: 'POST',
-      headers: { 'x-api-key': STAFF_API_KEY }
+      method: 'POST'
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
@@ -237,7 +231,6 @@ document.getElementById('upload-csv-btn').addEventListener('click', async () => 
   try {
     const response = await fetch('/admin/upload-csv', {
       method: 'POST',
-      headers: { 'x-api-key': STAFF_API_KEY },
       body: formData
     });
     const data = await response.json();
@@ -272,7 +265,6 @@ uploadCalendarBtn.addEventListener('click', async () => {
   try {
     const response = await fetch('/admin/upload-calendar', {
       method: 'POST',
-      headers: { 'x-api-key': STAFF_API_KEY },
       body: formData
     });
     const data = await response.json();
@@ -305,7 +297,6 @@ uploadDocumentBtn.addEventListener('click', async () => {
   try {
     const response = await fetch('/admin/upload-document', {
       method: 'POST',
-      headers: { 'x-api-key': STAFF_API_KEY },
       body: formData
     });
     const data = await response.json();
