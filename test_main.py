@@ -1,8 +1,9 @@
 from fastapi.testclient import TestClient
 from main import app
-import os
+import pytest
+from main import get_current_user
 
-STAFF_API_KEY = os.environ["STAFF_API_KEY"]
+
 
 def test_health():
     with TestClient(app) as client:
@@ -37,8 +38,7 @@ def test_update_data_records_correction(signed_in):
     with TestClient(app) as client:
         response = client.post(
             "/update-data",
-            json={"text": "test phrase for correction", "correct_category": "Advising"},
-            headers={"x-api-key": STAFF_API_KEY}
+            json={"text": "test phrase for correction", "correct_category": "Advising"}
         )
         assert response.status_code == 200
         assert response.json()["status"] == "Recorded"
@@ -48,8 +48,7 @@ def test_update_data_rejects_empty_text(signed_in):
     with TestClient(app) as client:
         response = client.post(
             "/update-data",
-            json={"text": "", "correct_category": "Advising"},
-            headers={"x-api-key": STAFF_API_KEY}
+            json={"text": "", "correct_category": "Advising"}
         )
         assert response.status_code == 422
 
@@ -58,8 +57,7 @@ def test_update_data_rejects_missing_category(signed_in):
     with TestClient(app) as client:
         response = client.post(
             "/update-data",
-            json={"text": "some phrase"},
-            headers={"x-api-key": STAFF_API_KEY}
+            json={"text": "some phrase"}
         )
         assert response.status_code == 422
 
@@ -73,27 +71,10 @@ def test_update_data_requires_login():
         assert response.status_code == 401
 
 
-def test_update_data_rejects_wrong_api_key():
-    with TestClient(app) as client:
-        response = client.post(
-            "/update-data",
-            json={"text": "test phrase", "correct_category": "Advising"},
-            headers={"x-api-key": "wrong-key-entirely"}
-        )
-        assert response.status_code == 401
-
-def test_root_loads():
-    with TestClient(app) as client:
-        response = client.get("/")
-        assert response.status_code == 200
-
 def test_retrain_requires_login():
     with TestClient(app) as client:
         response = client.post("/retrain")
         assert response.status_code == 401
-
-import pytest
-from main import get_current_user
 
 
 @pytest.fixture

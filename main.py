@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
@@ -29,16 +29,11 @@ load_dotenv()
 db_engine = create_engine(os.environ["DATABASE_URL"])
 MODEL_PATH = "models/model.joblib"
 ml_model = {}
-STAFF_API_KEY = os.environ["STAFF_API_KEY"]
 scheduler = BackgroundScheduler()
 
 
 # cooldown timer for /retrain
 _last_retrain_time = [0.0]
-
-def verify_api_key(x_api_key: str = Header(...)):
-    if x_api_key != STAFF_API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid API key")
 
 def get_current_user(request: Request):
     token = request.cookies.get(SESSION_COOKIE)
