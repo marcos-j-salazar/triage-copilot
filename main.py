@@ -127,7 +127,7 @@ def root(request: Request):
     user = current_user_or_none(request)
     if user is None:
         return RedirectResponse("/login?next=/", status_code=303)
-    return templates.TemplateResponse(request, "index.html", {"api_key": STAFF_API_KEY, "user": user})
+    return templates.TemplateResponse(request, "index.html", {"user": user})
 
 @app.get("/health")
 def health():
@@ -179,7 +179,7 @@ def admin(request: Request):
         return RedirectResponse("/login?next=/admin", status_code=303)
     if user["role"] != "admin":
         return RedirectResponse("/", status_code=303)
-    return templates.TemplateResponse(request, "admin.html", {"api_key": STAFF_API_KEY, "user": user})
+    return templates.TemplateResponse(request, "admin.html", {"user": user})
 
 @app.get("/admin/pending-corrections")
 def get_pending_corrections(_: dict = Depends(require_admin)):
@@ -287,7 +287,7 @@ def knowledge_base(request: Request):
     user = current_user_or_none(request)
     if user is None:
         return RedirectResponse("/login?next=/knowledge-base", status_code=303)
-    return templates.TemplateResponse(request, "knowledgebase.html", {"api_key": STAFF_API_KEY, "user": user})
+    return templates.TemplateResponse(request, "knowledgebase.html", {"user": user})
 
 @app.get("/login")
 def login_page(request: Request, next: str = "/"):
