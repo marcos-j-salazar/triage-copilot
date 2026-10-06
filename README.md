@@ -303,16 +303,30 @@ database behind a VPC or a fixed-IP egress.
 
 ## Authentication
 
-Every write/admin endpoint requires an `X-API-Key` header matching
-`STAFF_API_KEY`: `/update-data`, `/retrain`, and all `/admin/*` API routes. A
-missing header returns `422`, a wrong key returns `401`.
+Every page and API route requires a signed-in account, except `/health`,
+`/login`, and `/logout`.
 
-`/predict`, `/ask`, `/health`, and the HTML pages (`/`, `/knowledge-base`,
-`/admin`) require no authentication. `main.py` also injects `STAFF_API_KEY` into
-every rendered page through `base.html` so the browser can call the protected
-endpoints. As a result, anyone who can load the site can read the key from the
-page source. Access control is effectively "can you reach the site", not
-per-user. A real login/permissions system is on the roadmap.
+- **Accounts and roles.** Accounts live in the `users` table
+  (`db/users_schema.sql`), each with a username, a bcrypt password hash, and a
+  role of `staff` or `admin`. There is no sign-up page. Accounts are created
+  from the command line with `scripts/create_user.py` (see Setup).
+- **Sessions.** `POST /login` checks the password and sets a `tc_session`
+  cookie holding the user ID, signed with `SESSION_SECRET` (itsdangerous). The
+  cookie is `HttpOnly` and `SameSite=Lax`, and `Secure` when
+  `COOKIE_SECURE=true`. Without "Remember me" it ends when the browser closes
+  and is rejected after 12 hours. With it, it lasts 14 days. `POST /logout`
+  clears it. A failed sign-in returns `401` with the same message whether the
+  username or the password was wrong.
+- **Staff routes.** Any signed-in user can use `/`, `/knowledge-base`,
+  `/predict`, `/update-data`, `/ask`, and `/me`.
+- **Admin-only routes.** `/admin`, `/retrain`, and every `/admin/*` API route
+  require the `admin` role. Staff get `403` from the API routes and are
+  redirected to `/` from the `/admin` page. The sidebar hides the Admin links
+  from staff.
+- **Signed out.** Pages redirect to `/login?next=<page>`. API routes return
+  `401`. `next` only accepts same-site paths.
+
+Changing `SESSION_SECRET` signs everyone out.
 
 ## Requirements
 
@@ -336,16 +350,22 @@ Create a `.env` file in the project root:
 
 ```
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require
-STAFF_API_KEY=some-long-random-string
+SESSION_SECRET=some-long-random-string
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 AWS_S3_BUCKET=your-model-bucket
 OPENAI_API_KEY=...
+COOKIE_SECURE=true  # optional; set when served over HTTPS
 ```
 
-All six are read at import time (`retrain.py`, `ml/build_embeddings.py`, and
-`ml/retrieve.py` build their clients on import). Neither the app nor the test
-suite will start without them.
+The six required variables are read at import time (`auth.py`, `retrain.py`,
+`ml/build_embeddings.py`, and `ml/retrieve.py` read them on import). Neither
+the app nor the test suite will start without them. To generate a
+`SESSION_SECRET`:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
 
 ### Database
 
@@ -379,6 +399,16 @@ admin UI:
 python ml/build_embeddings.py
 ```
 
+### Accounts
+
+```bash
+python scripts/create_user.py alice --role admin   # prompts for the password twice
+python scripts/create_user.py bob                  # role defaults to staff
+```
+
+The script creates the `users` table if it is missing. Passwords must be at
+least 10 characters and at most 72 bytes.
+
 ## Running
 
 ```bash
@@ -399,21 +429,27 @@ docker run -p 8000:8000 --env-file .env triage-copilot
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
-| GET | `/` | none | Route-a-request page |
-| GET | `/knowledge-base` | none | Knowledge base chat page |
-| GET | `/admin` | none | Admin page (sections by `#hash`) |
+| GET | `/login` | none | Sign-in page |
+| POST | `/login` | none | Form sign-in; sets the session cookie |
+| POST | `/logout` | none | Clears the session cookie |
 | GET | `/health` | none | `{ "status": "healthy", "model_loaded": true }` |
-| POST | `/predict` | none | Classify a student request |
-| POST | `/update-data` | key | Record a confirmation/correction (pending) |
-| POST | `/retrain` | key | Run a retrain cycle now (300 s cooldown) |
-| GET | `/admin/pending-corrections` | key | List rows with `reviewed = FALSE` |
-| POST | `/admin/approve-correction` | key | `{ "id": n }` → set reviewed |
-| POST | `/admin/reject-correction` | key | `{ "id": n }` → delete row |
-| POST | `/admin/approve-all-pending` | key | Approve every pending row; returns `count` |
-| POST | `/admin/upload-csv` | key | Multipart `file`; batch-insert pending rows |
-| POST | `/admin/upload-calendar` | key | Multipart `file`; header-aware chunk + embed |
-| POST | `/admin/upload-document` | key | Multipart `file`; paragraph chunk + embed |
-| POST | `/ask` | none | Answer a question from uploaded documents |
+| GET | `/me` | login | Current user `{ "id", "username", "role" }` |
+| GET | `/` | login | Route-a-request page |
+| GET | `/knowledge-base` | login | Knowledge base chat page |
+| POST | `/predict` | login | Classify a student request |
+| POST | `/update-data` | login | Record a confirmation/correction (pending) |
+| POST | `/ask` | login | Answer a question from uploaded documents |
+| GET | `/admin` | admin | Admin page (sections by `#hash`) |
+| POST | `/retrain` | admin | Run a retrain cycle now (300 s cooldown) |
+| GET | `/admin/pending-corrections` | admin | List rows with `reviewed = FALSE` |
+| POST | `/admin/approve-correction` | admin | `{ "id": n }` → set reviewed |
+| POST | `/admin/reject-correction` | admin | `{ "id": n }` → delete row |
+| POST | `/admin/approve-all-pending` | admin | Approve every pending row; returns `count` |
+| POST | `/admin/upload-csv` | admin | Multipart `file`; batch-insert pending rows |
+| POST | `/admin/upload-calendar` | admin | Multipart `file`; header-aware chunk + embed |
+| POST | `/admin/upload-document` | admin | Multipart `file`; paragraph chunk + embed |
+
+`login` means any signed-in account; `admin` means the `admin` role.
 
 ### `POST /predict`
 
@@ -499,9 +535,13 @@ happened.
 pytest
 ```
 
-`test_main.py` covers `/health`, `/predict`, `/update-data` (input validation
-and API-key handling), `/` loading, and `/retrain` rejecting a missing key. It
-needs all six environment variables. Starting the app also downloads the model
+`test_main.py` has 15 tests covering `/health`, input validation on `/predict`
+and `/update-data`, the sign-in requirement on `/predict`, `/update-data`,
+`/ask`, `/retrain`, and `/admin/pending-corrections`, staff getting `403` from
+admin routes, and `/` redirecting to `/login` when signed out. Signed-in tests
+use a `signed_in` fixture that replaces `get_current_user` with a fake staff
+user, so no real account is needed. The suite needs all six required
+environment variables. Starting the app also downloads the model
 from S3. The `/update-data` test writes a real row to whatever database
 `DATABASE_URL` points at, so run it against a disposable database.
 
@@ -517,7 +557,7 @@ python scripts/probe_model.py
 `.github/workflows/tests.yml` (`Run Tests`):
 
 1. On every push and pull request to `main`, install dependencies and run
-   `pytest`. This needs repository secrets `DATABASE_URL`, `STAFF_API_KEY`,
+   `pytest`. This needs repository secrets `DATABASE_URL`, `SESSION_SECRET`,
    `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET`, and
    `OPENAI_API_KEY`.
 2. On push to `main` only, and only if the test job passes, trigger a Render
@@ -530,7 +570,7 @@ python scripts/probe_model.py
 main.py                 FastAPI app: pages, /predict, /update-data, /retrain, /admin/*, /ask, scheduler
 retrain.py              training-data pull, pipeline training, holdout eval, local + S3 model storage, retrain_log
 test_main.py            pytest suite for the API
-base.html               shared Jinja layout (sidebar, injects STAFF_API_KEY)
+base.html               shared Jinja layout (sidebar, signed-in user, logout)
 index.html              Route a request (/)
 knowledgebase.html      Knowledge base chat (/knowledge-base)
 admin.html              Admin sections: #retrain, #review, #upload, #documents
@@ -578,13 +618,11 @@ Planned, not yet implemented:
 - **Real Spanish / bilingual support**, beyond the handful of Spanish phrases in
   the seed data.
 - **Subcategory prediction.** The schema has the column, but nothing predicts it.
-- **A full login / permissions system**, replacing the single shared
-  `STAFF_API_KEY` that is currently embedded in every served page.
 
 ## Security note
 
 `.env` is git-ignored. Do not commit real credentials. This project's `.env`
-holds a database password, an AWS access key pair, an OpenAI API key, and the
-`STAFF_API_KEY`. If any of those has ever been committed or shared, rotate it.
-`STAFF_API_KEY` is served inside every HTML page by design, so it is not a
-secret from anyone who can load the site.
+holds a database password, an AWS access key pair, an OpenAI API key, and
+`SESSION_SECRET`. If any of those has ever been committed or shared, rotate it.
+Anyone with `SESSION_SECRET` can forge a session for any user, so treat it like
+a password.

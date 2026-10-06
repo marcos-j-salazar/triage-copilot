@@ -4,3 +4,15 @@ __pycache__/
 .git/
 .gitignore
 .env
+.env.*
+.venv/
+env/
+**/.DS_Store
+.pytest_cache/
+.vscode/
+.github/
+models/model_backup_*.joblib
+**/*.ipynb
+**/.ipynb_checkpoints
+**/__pycache__
+**/*.pyc
