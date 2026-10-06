@@ -54,7 +54,7 @@ The classifier is a scikit-learn `Pipeline`:
 - `TfidfVectorizer(ngram_range=(1, 2), sublinear_tf=True, lowercase=True)`
 - `LogisticRegression(class_weight="balanced", max_iter=1000)`
 
-It was first trained offline in `ml/Staff_Triage_ML_Pipeline.ipynb`, where it
+It was first trained offline in `notebooks/Staff_Triage_ML_Pipeline.ipynb`, where it
 reached a final holdout accuracy of **0.874**. In deployment the canonical model
 is stored in S3. On startup the FastAPI lifespan handler downloads it to
 `models/model.joblib`, and falls back to the local file if the download fails.
@@ -137,8 +137,8 @@ are accepted but ignored. A UTF-8 BOM is handled. The upload skips rows with an
 empty phrase or a category outside the six valid ones and reports how many rows
 it skipped. Valid rows are inserted as pending (`reviewed = FALSE`,
 `source = "staff"`), so they go through the same review step as individual
-corrections. `test.csv` is a three-row sample that includes one deliberately
-invalid row.
+corrections. `examples/sample_batch_upload.csv` is a three-row sample that
+includes one deliberately invalid row.
 
 ### Knowledge base (RAG)
 
@@ -350,13 +350,13 @@ suite will start without them.
 ### Database
 
 ```bash
-psql "$DATABASE_URL" -f ml/schema.sql              # training_phrases
-psql "$DATABASE_URL" -f ml/retrain_log_schema.sql  # retrain_log
+psql "$DATABASE_URL" -f db/training_phrases_schema.sql  # training_phrases
+psql "$DATABASE_URL" -f db/retrain_log_schema.sql       # retrain_log
 psql "$DATABASE_URL" -c "CREATE EXTENSION IF NOT EXISTS vector;"
-python ml/create_chunks_table.py                   # document_chunks (runs ml/document_chunks_schema.sql)
+python scripts/create_chunks_table.py                   # document_chunks (runs db/document_chunks_schema.sql)
 ```
 
-`ml/schema.sql` does **not** yet include the `reviewed` column that the review
+`db/training_phrases_schema.sql` does **not** yet include the `reviewed` column that the review
 flow and retraining depend on. The code expects a boolean `reviewed` column on
 `training_phrases`, where rows inserted without it default to `FALSE` and seed
 data is `TRUE` (otherwise nothing is trained on). For example:
@@ -369,7 +369,7 @@ UPDATE training_phrases SET reviewed = TRUE WHERE source = 'seed';
 Optionally seed the training data:
 
 ```bash
-python ml/import_seed_data.py
+python scripts/import_seed_data.py
 ```
 
 To load the bundled academic calendar from the command line instead of the
@@ -505,11 +505,11 @@ needs all six environment variables. Starting the app also downloads the model
 from S3. The `/update-data` test writes a real row to whatever database
 `DATABASE_URL` points at, so run it against a disposable database.
 
-`test.py` is an interactive CLI for probing the model by hand. It prints the top
-three categories with probabilities:
+`scripts/probe_model.py` is an interactive CLI for probing the model by hand. It
+prints the top three categories with probabilities:
 
 ```bash
-python test.py
+python scripts/probe_model.py
 ```
 
 ## CI/CD
@@ -530,9 +530,6 @@ python test.py
 main.py                 FastAPI app: pages, /predict, /update-data, /retrain, /admin/*, /ask, scheduler
 retrain.py              training-data pull, pipeline training, holdout eval, local + S3 model storage, retrain_log
 test_main.py            pytest suite for the API
-test.py                 interactive CLI for probing the model
-test.csv                sample batch-upload CSV (includes one invalid row)
-build_train_holdout_split.py   one-off script that produced ml/holdout_test_set.csv
 base.html               shared Jinja layout (sidebar, injects STAFF_API_KEY)
 index.html              Route a request (/)
 knowledgebase.html      Knowledge base chat (/knowledge-base)
@@ -543,21 +540,35 @@ models/model_backup_*.joblib   local backups written before a swap (git-ignored)
 Dockerfile              python:3.13-slim + uvicorn
 requirements.txt        pinned dependencies
 
-ml/
-  Staff_Triage_ML_Pipeline.ipynb   original training + evaluation notebook
-  schema.sql                       training_phrases table (see note on `reviewed`)
+scripts/                           run from the repo root (paths are relative to it)
+  create_user.py                   create a staff or admin account
+  build_train_holdout_split.py     one-off script that produced ml/holdout_test_set.csv
+  import_seed_data.py              load ml/data/seed_training_data.csv into the DB
+  create_chunks_table.py           applies db/document_chunks_schema.sql
+  probe_model.py                   interactive CLI for probing the model
+
+db/
+  users_schema.sql                 users table
+  training_phrases_schema.sql      training_phrases table (see note on `reviewed`)
   retrain_log_schema.sql           retrain_log table
   document_chunks_schema.sql       document_chunks table (pgvector)
-  create_chunks_table.py           applies document_chunks_schema.sql
+
+examples/
+  sample_batch_upload.csv          sample batch-upload CSV (includes one invalid row)
+
+notebooks/
+  Staff_Triage_ML_Pipeline.ipynb   original training + evaluation notebook
+
+ml/
   build_embeddings.py              chunkers, embedding, CLI loader for the calendar
   retrieve.py                      query embedding, nearest-chunk search, answer generation
   nscc_academic_calendar.txt       academic calendar source text
-  import_seed_data.py              load seed_training_data.csv into the DB
-  seed_training_data.csv           reference training dataset
-  train_only_data.csv              seed data minus the holdout split
   holdout_test_set.csv             fixed 660-row eval set used by retraining
-  *_fix_phrases.csv, *_contrastive_phrases.csv   targeted phrase sets from gap fixes
-  llm_generated_phrases.csv        raw LLM generation output
+  data/
+    seed_training_data.csv         reference training dataset
+    train_only_data.csv            seed data minus the holdout split
+    *_fix_phrases.csv, *_contrastive_phrases.csv   targeted phrase sets from gap fixes
+    llm_generated_phrases.csv      raw LLM generation output
 ```
 
 ## Roadmap
