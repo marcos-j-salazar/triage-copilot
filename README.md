@@ -285,9 +285,14 @@ database behind a VPC or a fixed-IP egress.
 - **Retraining discards 20% of the approved data.** `train_new_pipeline` still
   makes an 80/20 split and fits only on the 80%. The 20% test split isn't used
   for the swap decision, so those rows are simply left out of training.
-- **Automated tests cover only the core endpoints** (`/health`, `/predict`,
-  `/update-data`, `/`, and `/retrain` auth). The review endpoints, CSV upload,
-  document upload, `/ask`, and the scheduler have been tested manually only.
+- **Automated tests cover access control and the core endpoints only.** The 15
+  tests in `test_main.py` check `/health`, `/predict` and `/update-data`
+  (success and input validation), the sign-in requirement on `/predict`,
+  `/update-data`, `/ask`, `/retrain`, and `/admin/pending-corrections`, staff
+  getting `403` from admin routes, and `/` redirecting to `/login`. The
+  login/logout flow, page rendering, the review actions, CSV and document
+  upload, `/ask` answers, a real retrain cycle, and the scheduler have been
+  tested manually only.
 - **Document replace is not atomic.** Old chunks are deleted and committed
   first, then new chunks are embedded and inserted one at a time. If an OpenAI
   call fails partway through, the document is left partially loaded until it is
