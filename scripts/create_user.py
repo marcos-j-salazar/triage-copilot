@@ -23,7 +23,7 @@ if password != getpass.getpass("Confirm password: "):
     sys.exit("Passwords did not match.")
 
 engine = create_engine(os.environ["DATABASE_URL"])
-schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "db", "users_schema.sql")
+schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "db", "users_schema.sql")
 with open(schema_path) as f:
     schema_sql = f.read()
 

@@ -54,7 +54,7 @@ The classifier is a scikit-learn `Pipeline`:
 - `TfidfVectorizer(ngram_range=(1, 2), sublinear_tf=True, lowercase=True)`
 - `LogisticRegression(class_weight="balanced", max_iter=1000)`
 
-It was first trained offline in `ml/Staff_Triage_ML_Pipeline.ipynb`, where it
+It was first trained offline in `notebooks/Staff_Triage_ML_Pipeline.ipynb`, where it
 reached a final holdout accuracy of **0.874**. In deployment the canonical model
 is stored in S3. On startup the FastAPI lifespan handler downloads it to
 `models/model.joblib`, and falls back to the local file if the download fails.
@@ -137,8 +137,8 @@ are accepted but ignored. A UTF-8 BOM is handled. The upload skips rows with an
 empty phrase or a category outside the six valid ones and reports how many rows
 it skipped. Valid rows are inserted as pending (`reviewed = FALSE`,
 `source = "staff"`), so they go through the same review step as individual
-corrections. `test.csv` is a three-row sample that includes one deliberately
-invalid row.
+corrections. `examples/sample_batch_upload.csv` is a three-row sample that
+includes one deliberately invalid row.
 
 ### Knowledge base (RAG)
 
@@ -189,7 +189,7 @@ updates its content instead of duplicating it. Both return
 
 ## UI
 
-The app uses one shared layout (`base.html`) with a left sidebar, which becomes
+The app uses one shared layout (`templates/base.html`) with a left sidebar, which becomes
 a slide-out menu on narrow screens:
 
 - **Front desk:** *Route a request* (`/`) and *Knowledge base* (`/knowledge-base`)
@@ -285,9 +285,14 @@ database behind a VPC or a fixed-IP egress.
 - **Retraining discards 20% of the approved data.** `train_new_pipeline` still
   makes an 80/20 split and fits only on the 80%. The 20% test split isn't used
   for the swap decision, so those rows are simply left out of training.
-- **Automated tests cover only the core endpoints** (`/health`, `/predict`,
-  `/update-data`, `/`, and `/retrain` auth). The review endpoints, CSV upload,
-  document upload, `/ask`, and the scheduler have been tested manually only.
+- **Automated tests cover access control and the core endpoints only.** The 16
+  tests in `test_main.py` check `/health`, `/predict` and `/update-data`
+  (success and input validation), the sign-in requirement on `/predict`,
+  `/update-data`, `/ask`, `/retrain`, and `/admin/pending-corrections`, staff
+  getting `403` from admin routes, `/` redirecting to `/login`, and the sign-in
+  page rendering. The login/logout flow, the other pages, the review actions, CSV and document
+  upload, `/ask` answers, a real retrain cycle, and the scheduler have been
+  tested manually only.
 - **Document replace is not atomic.** Old chunks are deleted and committed
   first, then new chunks are embedded and inserted one at a time. If an OpenAI
   call fails partway through, the document is left partially loaded until it is
@@ -303,16 +308,30 @@ database behind a VPC or a fixed-IP egress.
 
 ## Authentication
 
-Every write/admin endpoint requires an `X-API-Key` header matching
-`STAFF_API_KEY`: `/update-data`, `/retrain`, and all `/admin/*` API routes. A
-missing header returns `422`, a wrong key returns `401`.
+Every page and API route requires a signed-in account, except `/health`,
+`/login`, and `/logout`.
 
-`/predict`, `/ask`, `/health`, and the HTML pages (`/`, `/knowledge-base`,
-`/admin`) require no authentication. `main.py` also injects `STAFF_API_KEY` into
-every rendered page through `base.html` so the browser can call the protected
-endpoints. As a result, anyone who can load the site can read the key from the
-page source. Access control is effectively "can you reach the site", not
-per-user. A real login/permissions system is on the roadmap.
+- **Accounts and roles.** Accounts live in the `users` table
+  (`db/users_schema.sql`), each with a username, a bcrypt password hash, and a
+  role of `staff` or `admin`. There is no sign-up page. Accounts are created
+  from the command line with `scripts/create_user.py` (see Setup).
+- **Sessions.** `POST /login` checks the password and sets a `tc_session`
+  cookie holding the user ID, signed with `SESSION_SECRET` (itsdangerous). The
+  cookie is `HttpOnly` and `SameSite=Lax`, and `Secure` when
+  `COOKIE_SECURE=true`. Without "Remember me" it ends when the browser closes
+  and is rejected after 12 hours. With it, it lasts 14 days. `POST /logout`
+  clears it. A failed sign-in returns `401` with the same message whether the
+  username or the password was wrong.
+- **Staff routes.** Any signed-in user can use `/`, `/knowledge-base`,
+  `/predict`, `/update-data`, `/ask`, and `/me`.
+- **Admin-only routes.** `/admin`, `/retrain`, and every `/admin/*` API route
+  require the `admin` role. Staff get `403` from the API routes and are
+  redirected to `/` from the `/admin` page. The sidebar hides the Admin links
+  from staff.
+- **Signed out.** Pages redirect to `/login?next=<page>`. API routes return
+  `401`. `next` only accepts same-site paths.
+
+Changing `SESSION_SECRET` signs everyone out.
 
 ## Requirements
 
@@ -336,27 +355,33 @@ Create a `.env` file in the project root:
 
 ```
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require
-STAFF_API_KEY=some-long-random-string
+SESSION_SECRET=some-long-random-string
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 AWS_S3_BUCKET=your-model-bucket
 OPENAI_API_KEY=...
+COOKIE_SECURE=true  # optional; set when served over HTTPS
 ```
 
-All six are read at import time (`retrain.py`, `ml/build_embeddings.py`, and
-`ml/retrieve.py` build their clients on import). Neither the app nor the test
-suite will start without them.
+The six required variables are read at import time (`auth.py`, `retrain.py`,
+`ml/build_embeddings.py`, and `ml/retrieve.py` read them on import). Neither
+the app nor the test suite will start without them. To generate a
+`SESSION_SECRET`:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
 
 ### Database
 
 ```bash
-psql "$DATABASE_URL" -f ml/schema.sql              # training_phrases
-psql "$DATABASE_URL" -f ml/retrain_log_schema.sql  # retrain_log
+psql "$DATABASE_URL" -f db/training_phrases_schema.sql  # training_phrases
+psql "$DATABASE_URL" -f db/retrain_log_schema.sql       # retrain_log
 psql "$DATABASE_URL" -c "CREATE EXTENSION IF NOT EXISTS vector;"
-python ml/create_chunks_table.py                   # document_chunks (runs ml/document_chunks_schema.sql)
+python scripts/create_chunks_table.py                   # document_chunks (runs db/document_chunks_schema.sql)
 ```
 
-`ml/schema.sql` does **not** yet include the `reviewed` column that the review
+`db/training_phrases_schema.sql` does **not** yet include the `reviewed` column that the review
 flow and retraining depend on. The code expects a boolean `reviewed` column on
 `training_phrases`, where rows inserted without it default to `FALSE` and seed
 data is `TRUE` (otherwise nothing is trained on). For example:
@@ -369,7 +394,7 @@ UPDATE training_phrases SET reviewed = TRUE WHERE source = 'seed';
 Optionally seed the training data:
 
 ```bash
-python ml/import_seed_data.py
+python scripts/import_seed_data.py
 ```
 
 To load the bundled academic calendar from the command line instead of the
@@ -378,6 +403,16 @@ admin UI:
 ```bash
 python ml/build_embeddings.py
 ```
+
+### Accounts
+
+```bash
+python scripts/create_user.py alice --role admin   # prompts for the password twice
+python scripts/create_user.py bob                  # role defaults to staff
+```
+
+The script creates the `users` table if it is missing. Passwords must be at
+least 10 characters and at most 72 bytes.
 
 ## Running
 
@@ -399,21 +434,27 @@ docker run -p 8000:8000 --env-file .env triage-copilot
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
-| GET | `/` | none | Route-a-request page |
-| GET | `/knowledge-base` | none | Knowledge base chat page |
-| GET | `/admin` | none | Admin page (sections by `#hash`) |
+| GET | `/login` | none | Sign-in page |
+| POST | `/login` | none | Form sign-in; sets the session cookie |
+| POST | `/logout` | none | Clears the session cookie |
 | GET | `/health` | none | `{ "status": "healthy", "model_loaded": true }` |
-| POST | `/predict` | none | Classify a student request |
-| POST | `/update-data` | key | Record a confirmation/correction (pending) |
-| POST | `/retrain` | key | Run a retrain cycle now (300 s cooldown) |
-| GET | `/admin/pending-corrections` | key | List rows with `reviewed = FALSE` |
-| POST | `/admin/approve-correction` | key | `{ "id": n }` → set reviewed |
-| POST | `/admin/reject-correction` | key | `{ "id": n }` → delete row |
-| POST | `/admin/approve-all-pending` | key | Approve every pending row; returns `count` |
-| POST | `/admin/upload-csv` | key | Multipart `file`; batch-insert pending rows |
-| POST | `/admin/upload-calendar` | key | Multipart `file`; header-aware chunk + embed |
-| POST | `/admin/upload-document` | key | Multipart `file`; paragraph chunk + embed |
-| POST | `/ask` | none | Answer a question from uploaded documents |
+| GET | `/me` | login | Current user `{ "id", "username", "role" }` |
+| GET | `/` | login | Route-a-request page |
+| GET | `/knowledge-base` | login | Knowledge base chat page |
+| POST | `/predict` | login | Classify a student request |
+| POST | `/update-data` | login | Record a confirmation/correction (pending) |
+| POST | `/ask` | login | Answer a question from uploaded documents |
+| GET | `/admin` | admin | Admin page (sections by `#hash`) |
+| POST | `/retrain` | admin | Run a retrain cycle now (300 s cooldown) |
+| GET | `/admin/pending-corrections` | admin | List rows with `reviewed = FALSE` |
+| POST | `/admin/approve-correction` | admin | `{ "id": n }` → set reviewed |
+| POST | `/admin/reject-correction` | admin | `{ "id": n }` → delete row |
+| POST | `/admin/approve-all-pending` | admin | Approve every pending row; returns `count` |
+| POST | `/admin/upload-csv` | admin | Multipart `file`; batch-insert pending rows |
+| POST | `/admin/upload-calendar` | admin | Multipart `file`; header-aware chunk + embed |
+| POST | `/admin/upload-document` | admin | Multipart `file`; paragraph chunk + embed |
+
+`login` means any signed-in account; `admin` means the `admin` role.
 
 ### `POST /predict`
 
@@ -499,17 +540,22 @@ happened.
 pytest
 ```
 
-`test_main.py` covers `/health`, `/predict`, `/update-data` (input validation
-and API-key handling), `/` loading, and `/retrain` rejecting a missing key. It
-needs all six environment variables. Starting the app also downloads the model
+`test_main.py` has 16 tests covering `/health`, input validation on `/predict`
+and `/update-data`, the sign-in requirement on `/predict`, `/update-data`,
+`/ask`, `/retrain`, and `/admin/pending-corrections`, staff getting `403` from
+admin routes, `/` redirecting to `/login` when signed out, and `/login`
+rendering. Signed-in tests
+use a `signed_in` fixture that replaces `get_current_user` with a fake staff
+user, so no real account is needed. The suite needs all six required
+environment variables. Starting the app also downloads the model
 from S3. The `/update-data` test writes a real row to whatever database
 `DATABASE_URL` points at, so run it against a disposable database.
 
-`test.py` is an interactive CLI for probing the model by hand. It prints the top
-three categories with probabilities:
+`scripts/probe_model.py` is an interactive CLI for probing the model by hand. It
+prints the top three categories with probabilities:
 
 ```bash
-python test.py
+python scripts/probe_model.py
 ```
 
 ## CI/CD
@@ -517,7 +563,7 @@ python test.py
 `.github/workflows/tests.yml` (`Run Tests`):
 
 1. On every push and pull request to `main`, install dependencies and run
-   `pytest`. This needs repository secrets `DATABASE_URL`, `STAFF_API_KEY`,
+   `pytest`. This needs repository secrets `DATABASE_URL`, `SESSION_SECRET`,
    `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET`, and
    `OPENAI_API_KEY`.
 2. On push to `main` only, and only if the test job passes, trigger a Render
@@ -530,34 +576,47 @@ python test.py
 main.py                 FastAPI app: pages, /predict, /update-data, /retrain, /admin/*, /ask, scheduler
 retrain.py              training-data pull, pipeline training, holdout eval, local + S3 model storage, retrain_log
 test_main.py            pytest suite for the API
-test.py                 interactive CLI for probing the model
-test.csv                sample batch-upload CSV (includes one invalid row)
-build_train_holdout_split.py   one-off script that produced ml/holdout_test_set.csv
-base.html               shared Jinja layout (sidebar, injects STAFF_API_KEY)
-index.html              Route a request (/)
-knowledgebase.html      Knowledge base chat (/knowledge-base)
-admin.html              Admin sections: #retrain, #review, #upload, #documents
+templates/              Jinja templates
+  base.html             shared layout (sidebar, signed-in user, logout)
+  index.html            Route a request (/)
+  knowledgebase.html    Knowledge base chat (/knowledge-base)
+  admin.html            Admin sections: #retrain, #review, #upload, #documents
+  login.html            Sign-in page (/login)
 static/                 app.js, admin.js, ask.js, nav.js, style.css
 models/model.joblib     live pipeline (pulled from S3 at startup)
 models/model_backup_*.joblib   local backups written before a swap (git-ignored)
 Dockerfile              python:3.13-slim + uvicorn
 requirements.txt        pinned dependencies
 
-ml/
-  Staff_Triage_ML_Pipeline.ipynb   original training + evaluation notebook
-  schema.sql                       training_phrases table (see note on `reviewed`)
+scripts/                           run from the repo root (paths are relative to it)
+  create_user.py                   create a staff or admin account
+  build_train_holdout_split.py     one-off script that produced ml/holdout_test_set.csv
+  import_seed_data.py              load ml/data/seed_training_data.csv into the DB
+  create_chunks_table.py           applies db/document_chunks_schema.sql
+  probe_model.py                   interactive CLI for probing the model
+
+db/
+  users_schema.sql                 users table
+  training_phrases_schema.sql      training_phrases table (see note on `reviewed`)
   retrain_log_schema.sql           retrain_log table
   document_chunks_schema.sql       document_chunks table (pgvector)
-  create_chunks_table.py           applies document_chunks_schema.sql
+
+examples/
+  sample_batch_upload.csv          sample batch-upload CSV (includes one invalid row)
+
+notebooks/
+  Staff_Triage_ML_Pipeline.ipynb   original training + evaluation notebook
+
+ml/
   build_embeddings.py              chunkers, embedding, CLI loader for the calendar
   retrieve.py                      query embedding, nearest-chunk search, answer generation
   nscc_academic_calendar.txt       academic calendar source text
-  import_seed_data.py              load seed_training_data.csv into the DB
-  seed_training_data.csv           reference training dataset
-  train_only_data.csv              seed data minus the holdout split
   holdout_test_set.csv             fixed 660-row eval set used by retraining
-  *_fix_phrases.csv, *_contrastive_phrases.csv   targeted phrase sets from gap fixes
-  llm_generated_phrases.csv        raw LLM generation output
+  data/
+    seed_training_data.csv         reference training dataset
+    train_only_data.csv            seed data minus the holdout split
+    *_fix_phrases.csv, *_contrastive_phrases.csv   targeted phrase sets from gap fixes
+    llm_generated_phrases.csv      raw LLM generation output
 ```
 
 ## Roadmap
@@ -567,13 +626,11 @@ Planned, not yet implemented:
 - **Real Spanish / bilingual support**, beyond the handful of Spanish phrases in
   the seed data.
 - **Subcategory prediction.** The schema has the column, but nothing predicts it.
-- **A full login / permissions system**, replacing the single shared
-  `STAFF_API_KEY` that is currently embedded in every served page.
 
 ## Security note
 
 `.env` is git-ignored. Do not commit real credentials. This project's `.env`
-holds a database password, an AWS access key pair, an OpenAI API key, and the
-`STAFF_API_KEY`. If any of those has ever been committed or shared, rotate it.
-`STAFF_API_KEY` is served inside every HTML page by design, so it is not a
-secret from anyone who can load the site.
+holds a database password, an AWS access key pair, an OpenAI API key, and
+`SESSION_SECRET`. If any of those has ever been committed or shared, rotate it.
+Anyone with `SESSION_SECRET` can forge a session for any user, so treat it like
+a password.

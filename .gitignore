@@ -17,3 +17,23 @@ env/
 *.log
 
 models/model_backup_*.joblib
+
+# Secrets / credentials
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+credentials*.json
+
+# Tooling / caches
+.ipynb_checkpoints/
+.pytest_cache/
+.idea/
+.coverage
+htmlcov/
+
+# Local data
+*.sqlite*
+*.dump
+uploads/

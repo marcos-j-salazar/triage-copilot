@@ -117,3 +117,9 @@ def test_root_redirects_to_login_when_signed_out():
         response = client.get("/", follow_redirects=False)
         assert response.status_code == 303
         assert response.headers["location"].startswith("/login")
+
+
+def test_login_page_renders_when_signed_out():
+    with TestClient(app) as client:
+        response = client.get("/login")
+        assert response.status_code == 200
