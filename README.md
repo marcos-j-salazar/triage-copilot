@@ -1,7 +1,9 @@
 # Staff Triage Copilot
 
-A staff-facing tool for the front desk of a community college's Student Success
-Center. It does two jobs:
+*Independent student project, inspired by experience at a college front desk. Not affiliated with, endorsed by, or used by North Shore Community College or any other institution. It contains no names, IDs, or other personal information about students.*
+
+A prototype staff-facing tool modeled on a community college front desk
+workflow. It does two jobs:
 
 1. **Routing.** Staff paste what a student said, and a scikit-learn classifier
    predicts which of six departments should handle it, with a confidence score.
