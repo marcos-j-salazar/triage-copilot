@@ -189,7 +189,7 @@ updates its content instead of duplicating it. Both return
 
 ## UI
 
-The app uses one shared layout (`base.html`) with a left sidebar, which becomes
+The app uses one shared layout (`templates/base.html`) with a left sidebar, which becomes
 a slide-out menu on narrow screens:
 
 - **Front desk:** *Route a request* (`/`) and *Knowledge base* (`/knowledge-base`)
@@ -285,12 +285,12 @@ database behind a VPC or a fixed-IP egress.
 - **Retraining discards 20% of the approved data.** `train_new_pipeline` still
   makes an 80/20 split and fits only on the 80%. The 20% test split isn't used
   for the swap decision, so those rows are simply left out of training.
-- **Automated tests cover access control and the core endpoints only.** The 15
+- **Automated tests cover access control and the core endpoints only.** The 16
   tests in `test_main.py` check `/health`, `/predict` and `/update-data`
   (success and input validation), the sign-in requirement on `/predict`,
   `/update-data`, `/ask`, `/retrain`, and `/admin/pending-corrections`, staff
-  getting `403` from admin routes, and `/` redirecting to `/login`. The
-  login/logout flow, page rendering, the review actions, CSV and document
+  getting `403` from admin routes, `/` redirecting to `/login`, and the sign-in
+  page rendering. The login/logout flow, the other pages, the review actions, CSV and document
   upload, `/ask` answers, a real retrain cycle, and the scheduler have been
   tested manually only.
 - **Document replace is not atomic.** Old chunks are deleted and committed
@@ -540,10 +540,11 @@ happened.
 pytest
 ```
 
-`test_main.py` has 15 tests covering `/health`, input validation on `/predict`
+`test_main.py` has 16 tests covering `/health`, input validation on `/predict`
 and `/update-data`, the sign-in requirement on `/predict`, `/update-data`,
 `/ask`, `/retrain`, and `/admin/pending-corrections`, staff getting `403` from
-admin routes, and `/` redirecting to `/login` when signed out. Signed-in tests
+admin routes, `/` redirecting to `/login` when signed out, and `/login`
+rendering. Signed-in tests
 use a `signed_in` fixture that replaces `get_current_user` with a fake staff
 user, so no real account is needed. The suite needs all six required
 environment variables. Starting the app also downloads the model
@@ -575,10 +576,12 @@ python scripts/probe_model.py
 main.py                 FastAPI app: pages, /predict, /update-data, /retrain, /admin/*, /ask, scheduler
 retrain.py              training-data pull, pipeline training, holdout eval, local + S3 model storage, retrain_log
 test_main.py            pytest suite for the API
-base.html               shared Jinja layout (sidebar, signed-in user, logout)
-index.html              Route a request (/)
-knowledgebase.html      Knowledge base chat (/knowledge-base)
-admin.html              Admin sections: #retrain, #review, #upload, #documents
+templates/              Jinja templates
+  base.html             shared layout (sidebar, signed-in user, logout)
+  index.html            Route a request (/)
+  knowledgebase.html    Knowledge base chat (/knowledge-base)
+  admin.html            Admin sections: #retrain, #review, #upload, #documents
+  login.html            Sign-in page (/login)
 static/                 app.js, admin.js, ask.js, nav.js, style.css
 models/model.joblib     live pipeline (pulled from S3 at startup)
 models/model_backup_*.joblib   local backups written before a swap (git-ignored)
